@@ -1,0 +1,268 @@
+#+TITLE: Emacs 精進
+#+BOOK_DIR: ../public
+#+FILETAGS: :emacs:tag2:
+
+* スクリプト
+
+#+NAME: zenn-headings
+#+BEGIN_SRC elisp :results output
+(org-map-entries
+  (lambda ()
+    (let* ((title (org-entry-get nil "EXPORT_FILE_NAME"))
+           (is-draft (org-entry-get nil "DRAFT")))
+      (when (and title (not is-draft))
+        (princ (concat "- " title "\n")))))
+  "LEVEL=1")
+#+END_SRC
+
+* =config.yaml=
+:PROPERTIES:
+:DRAFT:
+:END:
+
+Zenn Book 用
+
+#+BEGIN_SRC yaml :tangle ../books/emacs-2025/config.yaml :noweb yes
+title: "Emacs 精進 2025"
+summary: "アドベントカレンダー"
+topics: ["emacs"]
+published: false
+price: 0
+chapters:
+<<zenn-headings()>>
+#+END_SRC
+
+* Emacs 精進 01: 考える方が速いに決まってる
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-01
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 1 日目の投稿です。
+
+** 背景
+
+2025 年 Qiita アドベントカレンダーの『完走賞』を狙って Emacs の記事を 25 本投稿します。審査は厳し目らしく、記事の品質を高めに保つ必要があります:
+
+https://blog.qiita.com/adventcalendar-2025-qiitapresents/
+
+とはいえガチガチの技術記事 25 本となると、読み書きともに現実的ではなくなります。設定野郎の皆様を念頭に、流し読みできる程度の技術日記を 25 本書いて行こうと思います。
+
+*** 対象読者
+
+Emacs ユーザが主なターゲットです。設定の効果を主に紹介するため、環境構築全般に興味がある人も対象になるかと思います。
+
+** Qiita 執筆環境構築
+
+初日は『Emacs 精進』の執筆環境を構築します。 12 月中に Markdown 記事を 25 本書くことになりますが、これらの記事を 1 つの [[https://orgmode.org/][org-mode]] ファイル内に記載したいと思います。
+
+*** =.org= ファイルの構成
+
+以下の =.org= ファイルに 25 記事を全て記載し、 =.org= ファイルから 25 個の Markdown ファイルを生成することにします:
+
+#+NAME: 2025-emacs.org
+#+BEGIN_SRC org
+,#+TITLE: Emacs 精進
+,#+BOOK_DIR: ../public
+,#+FILETAGS: :emacs:
+
+,* Emacs 精進 01: 考える方が速いに決まってる
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-01
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 1 日目の記事です。
+
+..
+
+,* Emacs 精進 25: 最強の小指
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-25
+:END:
+#+END_SRC
+
+#+BEGIN_QUOTE
+=#+BOOK_DIR= および =EXPORT_FILE_NAME= は後ほど使用する独自のプロパティです。
+
+- =BOOK_DIR= で出力先のディレクトリを設定します。 (Zenn Book を意識した名前です)
+- =EXPORT_FILE_NAME= で出力先のファイル名を設定します。
+#+END_QUOTE
+
+Emacs 上では次のように見えます。各記事に相当する見出しを折り畳むことで、一連の投稿をエディタから一望できます:
+
+#+BEGIN_EXPORT md
+<img width="75%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/aed6ce46-4df0-4815-9aaf-1c01bd6fafdc.png">
+#+END_EXPORT
+
+*** ファイル構成
+
+以下のファイル構成で、 [[https://github.com/increments/qiita-cli][increments/qiita-cli]] によりローカル環境でプレビューができます:
+
+#+BEGIN_SRC txt
+.
+├── public
+│   ├── emacs-2025-01.md
+│   ├── ..
+│   └── emacs-2025-25.md
+└── org
+    └── emacs-2025.org
+#+END_SRC
+
+=increments/qiita-cli= はフラットなファイル構成を要求しますが、 =.org= ファイルを活かしてより自由なコンテンツ管理ができると言えます。
+
+*** =org-qiita-export-buffer-to-book= の作成
+
+後は =.org= ファイルからの Markdown ファイルの展開を実装します。幸い org ドキュメントの /subtree/ に対する /export/ という概念があり、 org-mode はこのような処理が得意です。
+
+詳しくは [[https://zenn.dev/toyboot4e/articles/write-org-for-great-good][Zenn Book における解説記事]] に譲ることにして、 Qiita 版は次のようになりました:
+
+> *記事の ID や更新時刻の同期は考えていません* 。 GUI からの投稿を前提としています。
+
+#+BEGIN_SRC elisp
+(leaf ox-qmd
+  :commands (org-qiita-export-buffer-to-book)
+  :config
+  (defun qmd2-template-tags ()
+    (let ((tags (or (mapcar #'substring-no-properties (org-get-tags))
+                    "")))
+      (string-join
+       (mapcar (lambda (s) (format "\"%s\"" s)) tags)
+       ",")))
+
+  ;; Markdown file template for `@qiita/qiita-cli'
+  (defun qmd2-template (contents info)
+    (let* ((title (or (substring-no-properties (car (plist-get info :title))) ""))
+           (tags (qmd2-template-tags)))
+      (concat
+       "---\n"
+       "title: \"" title "\"\n"
+       "tags: [" tags "]\n"
+       "private: false\n"
+       "updated_at: \"\"\n"
+       "id: null\n"
+       "organization_url_name: null\n"
+       "slide: false\n"
+       "---\n\n"
+       contents)))
+
+  (org-export-define-derived-backend 'qmd2 'qmd
+    :options-alist
+    '((:title "TITLE" nil nil t)
+      (:tags "TAGS" nil nil space))
+    :translate-alist '((template . qmd2-template)))
+
+  (defun org-qmd2-export-to-markdown (&optional async subtreep visible-only)
+    (interactive)
+    (let ((outfile (org-export-output-file-name ".md" subtreep)))
+      (org-export-to-file 'qmd2 outfile async subtreep visible-only)))
+
+  (defun org-qiita-export-buffer-to-book (&optional org-dir)
+    "Runs subtree export to each level 1 heading, respecting `#+BOOK_DIR'."
+    (interactive)
+    (require 'ox-qmd)
+    (let* ((default-dir default-directory)
+           (pub-dir (car (cdr (car (org-collect-keywords '("BOOK_DIR")))))))
+      (cd pub-dir)
+      (unwind-protect
+          (org-map-entries
+           (lambda ()
+             (let ((exports (org-entry-get nil "EXPORT_FILE_NAME")))
+               (when exports
+                 (org-qmd2-export-to-markdown nil t))))
+           "LEVEL=1")
+        (cd default-dir)))))
+#+END_SRC
+
+Qiita CLI によるプレビューと Emacs (on Kitty & tmux) を並べると次のようになります:
+
+#+BEGIN_EXPORT md
+![01-overview.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/f051e5f7-346a-4ae8-aa5c-f109b35de396.png)
+#+END_EXPORT
+
+これで org-mode と Qiita CLI が協調するようになりました。 Qiita が自分のフィールドになったような気がします。
+
+なお [[https://zenn.dev/toyboot4e/articles/write-org-for-great-good][Zenn 版のスクリプト]] の通り Zenn Book としても出力できます:
+
+#+BEGIN_EXPORT md
+![01-zenn-book.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/fc6dd1d9-c343-46a8-ac8a-01d0a89188fc.png)
+#+END_EXPORT
+
+もちろん PDF 出力も可能です:
+
+** まとめ
+
+『Emacs 精進』の執筆環境を構築しました。 25 記事が 1 つの org ファイルに収まり、あるべき姿でスタートを切れたと思います。
+
+Qiita のコミュニティガイドラインも達成できたのではないでしょうか:
+
+- [X] 再利用性・汎用性がある
+- [X] メモや走り書きに留まらない
+- [X] 正確性の検証が十分である
+
+それでは次の記事でお会いしましょう！
+
+* Emacs 精進 02: 認知をサボれない……
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-02.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 2 日目の投稿です。
+
+** 背景
+
+前回は Qiita Advent Calender 用の執筆環境を構築しました。今回はまだ 2 日目の記事ですから、メタなことをやっていきたいと思います。
+
+**
+
+では
+
+* Emacs 精進 03: されど Embark
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-03.md
+:END:
+
+** 背景
+
+[[https://github.com/oantolin/embark][oantolin/embark]] は Emacs のワークフローを完全に変えてしまうパッケージだと言われています。 [[https://karthinks.com/software/fifteen-ways-to-use-embark/][Fifteen ways to use Embark]] のように、
+
+Emacs 31 で child frame がターミナルでも動くようになる
+
+*** =embark-act= のキーバインド
+
+以下のキーバインドで vertico の minibuffer から =embark-act= を呼び出せるようにしています:
+
+#+BEGIN_SRC elisp
+(with-eval-after-load 'vertico
+  (keymap-set vertico-map "C-s" #'embark-act))
+#+END_SRC
+
+=C-.= も人気ですが、ターミナル上で Ctrl + 記号類を正しく入力できないため、 =C-s= としました。
+
+*** Embark action を =completing-read= から選択する
+
+Embark の取っ付きにくさの 1 つに、 =embark-act= を選択し辛い問題があります。見づらい位置に出る上に、選択可能な action のごく一部しか表示できていません:
+
+TODO: スクリーンショット
+
+これは =completing-read= で出してくれた方が良いと思います。
+
+#+BEGIN_SRC elisp
+(leaf embark
+  :url "https://github.com/oantolin/embark"
+  :custom
+  ((embark-prompter . #'embark-completing-read-prompter)
+   (embark-indicators .
+      (embark-minimal-indicator  ; default is embark-mixed-indicator
+       embark-highlight-indicator
+       embark-isearch-highlight-indicator)))
+#+END_SRC
+
+TODO: 改善後のスクリーンショット
+
+#+BEGIN_QUOTE
+参考: [[https://github.com/oantolin/embark/issues/699][*Embark Actions* buffer pops up despite setting embark-promp to embark-completing-read-prompter #699]]
+#+END_QUOTE
+
+*** Embark Export の出力先をサイドバーにする
+
+僕専用の設定項目です。僕は [[https://github.com/ema2159/centaur-tabs][ema2159/centaur-tabs]] を使っています。 =centaur-tabs= の機能として
+
