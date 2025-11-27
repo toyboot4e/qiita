@@ -2,6 +2,16 @@
 #+BOOK_DIR: ../public
 #+FILETAGS: :emacs:tag2:
 
+#+LATEX_COMPILER: lualatex
+#+LATEX_HEADER: \usepackage{luatexja}
+#+LATEX_HEADER: \usepackage{luatexja-fontspec}
+#+LATEX_HEADER: \usepackage[haranoaji]{luatexja-preset}
+
+# #+LATEX_HEADER: \usepackage{fontspec}
+# #+LATEX_HEADER: \setmainfont{Noto Serif CJK JP}
+# #+LATEX_HEADER: \setsansfont{Noto Sans CJK JP}
+# #+LATEX_HEADER: \setmonofont{Noto Sans Mono CJK JP}
+
 * スクリプト
 
 #+NAME: zenn-headings
@@ -209,11 +219,46 @@ Qiita のコミュニティガイドラインも達成できたのではない�
 
 ** 背景
 
-前回は Qiita Advent Calender 用の執筆環境を構築しました。今回はまだ 2 日目の記事ですから、メタなことをやっていきたいと思います。
+前回は Qiita Advent Calender 用の執筆環境を構築しました。今回は 2 日目の記事ですから、まだまだメタなことをやっていきたいと思います。
 
-**
+『Emacs 精進 2025』は 1 つの =.org= ファイルで記述されています。これを PDF ファイルに変換した場合、技術同人誌の体を成すことはできるでしょうか？　やってみます！
 
-では
+** PDF 出力
+
+*** 案 1. =org-latex-export-to-pdf=
+
+=org-latex-export-to-pdf= 関数を使うと、日本語が全て無視されました。 AI に従うと、以下を =.org= ファイルの冒頭に記載して、最低限日本語を表示できるようになりました:
+
+#+BEGIN_SRC org
+,#+LATEX_COMPILER: lualatex
+,#+LATEX_HEADER: \usepackage{luatexja}
+,#+LATEX_HEADER: \usepackage{luatexja-fontspec}
+,#+LATEX_HEADER: \usepackage[haranoaji]{luatexja-preset}
+#+END_SRC
+
+#+BEGIN_QUOTE
+LuaTex などは NixOS においては =texliveFull= パッケージとして一括インストールできます。
+#+END_QUOTE
+
+変換後の画面は以下の通りです:
+
+#+BEGIN_EXPORT md
+![02-export-pdf.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/92650c18-cc35-4bac-8001-749686963ea6.png)
+#+END_EXPORT
+
+もう少しだけ調整するなら、 [[https://qiita.com/clothoid/items/0a8f825ae19150fe5750][emacs の org-latex-export-to-pdf 設定手順]] などが良さそうです (※ 未確認) 。しかし LaTeX が相手だと、自力でスタイルを修正するのは困難に思えました。
+
+*** 案 2. =ox-typst=
+
+[[https://typst.app/][Typst]] を経由して PDF を出力してみます。
+
+**** なぜ Typst か (経験則)
+
+[[https://toyboot4e.github.io/2025-08-08-typst-slides.html][Typst によるスライド生成]] の後に試したところ、テーマの調整なども簡単で、主戦力になりました。 PDF 出力も一定品質以上になる気がします。
+
+**** [[https://github.com/jmpunkt/ox-typst][=ox-typst=]] の導入
+
+**** PDF ファイルの生成
 
 * Emacs 精進 03: されど Embark
 :PROPERTIES:
