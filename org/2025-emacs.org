@@ -2,15 +2,14 @@
 #+BOOK_DIR: ../public
 #+FILETAGS: :emacs:tag2:
 
+# Minimum settings for org-latex-export-to-pdf
 #+LATEX_COMPILER: lualatex
 #+LATEX_HEADER: \usepackage{luatexja}
 #+LATEX_HEADER: \usepackage{luatexja-fontspec}
 #+LATEX_HEADER: \usepackage[haranoaji]{luatexja-preset}
 
-# #+LATEX_HEADER: \usepackage{fontspec}
-# #+LATEX_HEADER: \setmainfont{Noto Serif CJK JP}
-# #+LATEX_HEADER: \setsansfont{Noto Sans CJK JP}
-# #+LATEX_HEADER: \setmonofont{Noto Sans Mono CJK JP}
+# Typst template:
+#+typst_metadata: :template ./template.typ
 
 * スクリプト
 
@@ -55,7 +54,7 @@ chapters:
 
 https://blog.qiita.com/adventcalendar-2025-qiitapresents/
 
-とはいえガチガチの技術記事 25 本となると、読み書きともに現実的ではなくなります。設定野郎の皆様を念頭に、流し読みできる程度の技術日記を 25 本書いて行こうと思います。
+とはいえガチガチの技術記事 25 本となると、読み書きともに現実的ではなくなります。流し読みできる程度の濃度で 25 本書いて行こうと思います。
 
 *** 対象読者
 
@@ -91,7 +90,7 @@ Emacs ユーザが主なターゲットです。設定の効果を主に紹介�
 #+END_SRC
 
 #+BEGIN_QUOTE
-=#+BOOK_DIR= および =EXPORT_FILE_NAME= は後ほど使用する独自のプロパティです。
+=#+BOOK_DIR= および =EXPORT_FILE_NAME= は独自のプロパティです。後ほど使用します。
 
 - =BOOK_DIR= で出力先のディレクトリを設定します。 (Zenn Book を意識した名前です)
 - =EXPORT_FILE_NAME= で出力先のファイル名を設定します。
@@ -117,7 +116,7 @@ Emacs 上では次のように見えます。各記事に相当する見出し�
     └── emacs-2025.org
 #+END_SRC
 
-=increments/qiita-cli= はフラットなファイル構成を要求しますが、 =.org= ファイルを活かしてより自由なコンテンツ管理ができると言えます。
+=increments/qiita-cli= はフラットなファイル構成を要求しますから、 =public= 内には Emacs 精進以外の記事も混ざっていますが、 =emacs-2025.org= には Emacs 精進の記事のみが入っています。
 
 *** =org-qiita-export-buffer-to-book= の作成
 
@@ -131,6 +130,7 @@ Emacs 上では次のように見えます。各記事に相当する見出し�
 (leaf ox-qmd
   :commands (org-qiita-export-buffer-to-book)
   :config
+  ;; Converts org-mode tags into front matter tag.
   (defun qmd2-template-tags ()
     (let ((tags (or (mapcar #'substring-no-properties (org-get-tags))
                     "")))
@@ -138,7 +138,7 @@ Emacs 上では次のように見えます。各記事に相当する見出し�
        (mapcar (lambda (s) (format "\"%s\"" s)) tags)
        ",")))
 
-  ;; Markdown file template for `@qiita/qiita-cli'
+  ;; Markdown file template for `@qiita/qiita-cli'.
   (defun qmd2-template (contents info)
     (let* ((title (or (substring-no-properties (car (plist-get info :title))) ""))
            (tags (qmd2-template-tags)))
@@ -154,17 +154,20 @@ Emacs 上では次のように見えます。各記事に相当する見出し�
        "---\n\n"
        contents)))
 
+  ;; The Qiita Markdown export backend, built on top of `ox-qmd'.
   (org-export-define-derived-backend 'qmd2 'qmd
     :options-alist
     '((:title "TITLE" nil nil t)
       (:tags "TAGS" nil nil space))
     :translate-alist '((template . qmd2-template)))
 
+  ;; Exports a subtree of org file into a Markdown file.
   (defun org-qmd2-export-to-markdown (&optional async subtreep visible-only)
     (interactive)
     (let ((outfile (org-export-output-file-name ".md" subtreep)))
       (org-export-to-file 'qmd2 outfile async subtreep visible-only)))
 
+  ;; Exports each level 1 heading into a Markdown file.
   (defun org-qiita-export-buffer-to-book (&optional org-dir)
     "Runs subtree export to each level 1 heading, respecting `#+BOOK_DIR'."
     (interactive)
@@ -196,7 +199,7 @@ Qiita CLI によるプレビューと Emacs (on Kitty & tmux) を並べると次
 ![01-zenn-book.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/fc6dd1d9-c343-46a8-ac8a-01d0a89188fc.png)
 #+END_EXPORT
 
-もちろん PDF 出力も可能です:
+PDF 出力も可能です。
 
 ** まとめ
 
@@ -227,7 +230,7 @@ Qiita のコミュニティガイドラインも達成できたのではない�
 
 *** 案 1. =org-latex-export-to-pdf=
 
-=org-latex-export-to-pdf= 関数を使うと、日本語が全て無視されました。 AI に従うと、以下を =.org= ファイルの冒頭に記載して、最低限日本語を表示できるようになりました:
+=org-latex-export-to-pdf= 関数を使うと、日本語を全て枠所した PDF ファイルが生成されました。 AI に従うと、以下を =.org= ファイルの冒頭に記載して、最低限日本語が表示されるようになりました:
 
 #+BEGIN_SRC org
 ,#+LATEX_COMPILER: lualatex
@@ -240,23 +243,26 @@ Qiita のコミュニティガイドラインも達成できたのではない�
 LuaTex などは NixOS においては =texliveFull= パッケージとして一括インストールできます。
 #+END_QUOTE
 
-変換後の画面は以下の通りです:
+変換後の画面は以下の通りです。日本語も正しく表示されるようになりました:
 
 #+BEGIN_EXPORT md
 ![02-export-pdf.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/92650c18-cc35-4bac-8001-749686963ea6.png)
 #+END_EXPORT
 
-もう少しだけ調整するなら、 [[https://qiita.com/clothoid/items/0a8f825ae19150fe5750][emacs の org-latex-export-to-pdf 設定手順]] などが良さそうです (※ 未確認) 。しかし LaTeX が相手だと、自力でスタイルを修正するのは困難に思えました。
+もう少しだけ調整するなら、 [[https://qiita.com/clothoid/items/0a8f825ae19150fe5750][emacs の org-latex-export-to-pdf 設定手順]] などが良さそうです (※ 動作未確認) 。しかし LaTeX が相手だと、自力でスタイルを修正するのは困難に思えました。
 
 *** 案 2. =ox-typst=
 
-[[https://typst.app/][Typst]] を経由して PDF を出力してみます。
+[[https://typst.app/][Typst]] を経由して PDF を出力してみます。 =ox-typst= は Qiita, Zenn 共に検索結果が 0 件だったため、ネタとしても良さそうです。
 
 **** なぜ Typst か (経験則)
 
-[[https://toyboot4e.github.io/2025-08-08-typst-slides.html][Typst によるスライド生成]] の後に試したところ、テーマの調整なども簡単で、主戦力になりました。 PDF 出力も一定品質以上になる気がします。
+[[https://toyboot4e.github.io/2025-08-08-typst-slides.html][Typst によるスライド生成]] を試したところ、テーマの調整なども簡単で、主戦力になりました。 PDF 出力も一定品質以上になる気がします。
 
 **** [[https://github.com/jmpunkt/ox-typst][=ox-typst=]] の導入
+
+#+BEGIN_SRC elisp
+#+END_SRC
 
 **** PDF ファイルの生成
 
