@@ -1,6 +1,6 @@
 #+TITLE: Emacs 精進
 #+BOOK_DIR: ../public
-#+FILETAGS: :emacs:tag2:
+#+FILETAGS: :emacs:
 
 # Minimum settings for org-latex-export-to-pdf
 #+LATEX_COMPILER: lualatex
@@ -8,8 +8,9 @@
 #+LATEX_HEADER: \usepackage{luatexja-fontspec}
 #+LATEX_HEADER: \usepackage[haranoaji]{luatexja-preset}
 
-# Typst template:
-#+typst_metadata: :template ./template.typ
+#+BEGIN_EXPORT typst
+#set text(font: "Noto Sans Mono CJK JP")
+#+END_EXPORT
 
 * スクリプト
 
@@ -126,6 +127,7 @@ Emacs 上では次のように見えます。各記事に相当する見出し�
 
 > *記事の ID や更新時刻の同期は考えていません* 。 GUI からの投稿を前提としています。
 
+#+ATTR_TYPST: :breakable true
 #+BEGIN_SRC elisp
 (leaf ox-qmd
   :commands (org-qiita-export-buffer-to-book)
@@ -224,13 +226,13 @@ Qiita のコミュニティガイドラインも達成できたのではない�
 
 前回は Qiita Advent Calender 用の執筆環境を構築しました。今回は 2 日目の記事ですから、まだまだメタなことをやっていきたいと思います。
 
-『Emacs 精進 2025』は 1 つの =.org= ファイルで記述されています。これを PDF ファイルに変換した場合、技術同人誌の体を成すことはできるでしょうか？　やってみます！
+『Emacs 精進 2025』は 1 つの =.org= ファイルで記述されています。これを PDF ファイルに変換した場合、技術同人誌風に表示できるでしょうか？　やってみます！
 
 ** PDF 出力
 
 *** 案 1. =org-latex-export-to-pdf=
 
-=org-latex-export-to-pdf= 関数を使うと、日本語を全て枠所した PDF ファイルが生成されました。 AI に従うと、以下を =.org= ファイルの冒頭に記載して、最低限日本語が表示されるようになりました:
+=org-latex-export-to-pdf= 関数を使うと、日本語を全て枠所した PDF ファイルが生成されました。 AI に従うと、以下を =.org= ファイルの冒頭に記載して、最低限日本語も表示されるようになりました:
 
 #+BEGIN_SRC org
 ,#+LATEX_COMPILER: lualatex
@@ -243,13 +245,13 @@ Qiita のコミュニティガイドラインも達成できたのではない�
 LuaTex などは NixOS においては =texliveFull= パッケージとして一括インストールできます。
 #+END_QUOTE
 
-変換後の画面は以下の通りです。日本語も正しく表示されるようになりました:
+変換後の画面は以下の通りです。日本語も正しく表示されています:
 
 #+BEGIN_EXPORT md
-![02-export-pdf.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/92650c18-cc35-4bac-8001-749686963ea6.png)
+![02-export-pdf.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/80047416-52e6-4ec8-8119-bdf720bf0577.png)
 #+END_EXPORT
 
-もう少しだけ調整するなら、 [[https://qiita.com/clothoid/items/0a8f825ae19150fe5750][emacs の org-latex-export-to-pdf 設定手順]] などが良さそうです (※ 動作未確認) 。しかし LaTeX が相手だと、自力でスタイルを修正するのは困難に思えました。
+もう少しだけ調整するなら、 [[https://qiita.com/clothoid/items/0a8f825ae19150fe5750][emacs の org-latex-export-to-pdf 設定手順]] などが良さそうです (※ 動作未確認) 。しかし LaTeX が相手だと、自力でスタイルを修正するのは困難に思えたので、他の方法も検討してみます。
 
 *** 案 2. =ox-typst=
 
@@ -261,10 +263,54 @@ LuaTex などは NixOS においては =texliveFull= パッケージとして一
 
 **** [[https://github.com/jmpunkt/ox-typst][=ox-typst=]] の導入
 
+ひとまずインストールします:
+
 #+BEGIN_SRC elisp
+(leaf ox-typst)
 #+END_SRC
 
-**** PDF ファイルの生成
+グローバルな設定は設けず、ドキュメントごとに [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Specifying-File-Variables.html][File Variables]] を設定するのが良さそうです:
+
+#+NAME: Typst の数式の構文を使う場合
+#+BEGIN_SRC elisp
+;; Local Variables:
+;; org-typst-from-latex-environment: (function org-typst-from-latex-with-naive)
+;; org-typst-from-latex-fragment: (function org-typst-from-latex-with-naive)
+;; End:
+#+END_SRC
+
+**** PDF 変換
+
+さっそく =org-typst-export-to-pdf= を使ってみましたが、コードブロックが一枚の画像のような扱いとなり、画面下部で見切れてしまいました:
+
+#+BEGIN_EXPORT md
+![02-code-block-out-of-page.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/d53e8189-5167-4024-bbc7-8fa99a89dbf5.png)
+#+END_EXPORT
+
+#+BEGIN_QUOTE
+それでもハイライト付きなのは嬉しい！
+#+END_QUOTE
+
+試しに [[https://typst.app/docs/reference/model/figure/][figure]] の =breakable= 属性を =ATTR_TYPST= で設定……するつもりが、 =ox-typst= において未実装のようで =.typ= ファイルの出力内容は変わりませんでした:
+
+#+BEGIN_SRC org
+,#+ATTR_TYPST: :breakable true
+,#+BEGIN_SRC elisp
+(leaf ox-qmd
+  :commands (org-qiita-export-buffer-to-book)
+  ;; ..
+,#+END_SRC
+#+END_SRC
+
+ちょっと厳しそうなので、早めに切り上げます。
+
+** 結論
+
+=ox-typst= では、出力ファイルの細かい調整はできないと思います。長期的にコントリビュートする気がなければ、本格的な使用は難しそうだと感じました。
+
+今回の記事としては、アドベントカレンダー用の =.org= ファイルを PDF 出力して、 25 記事分の内容を一気に確認できるようになったということで、良しとしたいと思います。
+
+それでは次の記事でお会いしましょう！ (あと 23 記事、、)
 
 * Emacs 精進 03: されど Embark
 :PROPERTIES:
@@ -316,4 +362,3 @@ TODO: 改善後のスクリーンショット
 *** Embark Export の出力先をサイドバーにする
 
 僕専用の設定項目です。僕は [[https://github.com/ema2159/centaur-tabs][ema2159/centaur-tabs]] を使っています。 =centaur-tabs= の機能として
-
