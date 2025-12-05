@@ -317,47 +317,219 @@ LuaTex などは NixOS においては =texliveFull= パッケージとして一
 :EXPORT_FILE_NAME: emacs-2025-03.md
 :END:
 
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 3 日目の投稿です。
+
 ** 背景
 
-[[https://github.com/oantolin/embark][oantolin/embark]] は Emacs のワークフローを完全に変えてしまうパッケージだと言われています。 [[https://karthinks.com/software/fifteen-ways-to-use-embark/][Fifteen ways to use Embark]] のように、
+[[https://github.com/oantolin/embark][oantolin/embark]] は Emacs でのワークフローを大きく変えるパッケージです。 [[https://karthinks.com/software/fifteen-ways-to-use-embark/][Fifteen ways to use Embark]] のように、あらゆる場面で使い倒している人もいるとか。
 
-Emacs 31 で child frame がターミナルでも動くようになる
+かくいう自分は全く乗りこなせていないため、改めて Embark 関係の設定に向き合ってみます。
+
+** Embark 入門
+
+*** Embark とは
+
+Embark の主な API は =embark-act= です。
+
+=embark-act= は、事前に用意した _action_ を、任意のコンテキストに差し込んで使えるコマンドという印象です。個々のパッケージに対して設定しなくても、外部から action を追加できる点が優れた点なのかと思います。
 
 *** =embark-act= のキーバインド
 
-以下のキーバインドで vertico の minibuffer から =embark-act= を呼び出せるようにしています:
-
-#+BEGIN_SRC elisp
-(with-eval-after-load 'vertico
-  (keymap-set vertico-map "C-s" #'embark-act))
-#+END_SRC
-
-=C-.= も人気ですが、ターミナル上で Ctrl + 記号類を正しく入力できないため、 =C-s= としました。
-
-*** Embark action を =completing-read= から選択する
-
-Embark の取っ付きにくさの 1 つに、 =embark-act= を選択し辛い問題があります。見づらい位置に出る上に、選択可能な action のごく一部しか表示できていません:
-
-TODO: スクリーンショット
-
-これは =completing-read= で出してくれた方が良いと思います。
+=embark-act= のバインドには =C-.= が推奨されていますが、ターミナル上の Emacs では Ctrl + 記号類を正しく入力できません。ひとまず minibuffer 上では =C-s= としました:
 
 #+BEGIN_SRC elisp
 (leaf embark
-  :url "https://github.com/oantolin/embark"
-  :custom
-  ((embark-prompter . #'embark-completing-read-prompter)
-   (embark-indicators .
-      (embark-minimal-indicator  ; default is embark-mixed-indicator
-       embark-highlight-indicator
-       embark-isearch-highlight-indicator)))
+  :init
+  (keymap-set minibuffer-mode-map "C-s" #'embark-act))
+
+(leaf embark-consult
+  :hook
+  (embark-collect-mode-hook . consult-preview-at-point-mode))
 #+END_SRC
 
-TODO: 改善後のスクリーンショット
+#+BEGIN_QUOTE
+なぜ =:init= にする必要があるか (なぜ =:bind= では動作しないのか) は未確認です。
+#+END_QUOTE
+
+*** Embark action を =completing-read= で選ぶ
+
+=find-file= 中に =embark-act= を呼び出しすると、以下のように =*Embark Actions*= が表示します。非常に見づらい上に、たった 6 つしかコマンドが見れません:
+
+#+BEGIN_EXPORT markdown
+![03-embark-act.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/044dac0a-837a-46a7-bf67-2f40cb097e02.png)
+#+END_EXPORT
+
+=embark-act= 中に =embark-bindings= を呼ぶと、 embark aciton を =completing-read= から選択できます。これで十分と考えて、 =*Embark Actions*= は非表示にしました:
+
+#+BEGIN_SRC elisp
+;; leaf ブロックに追加
+  :custom
+  ((embark-indicators .
+   (embark-minimal-indicator  ; default is embark-mixed-indicator
+    embark-highlight-indicator
+    embark-isearch-highlight-indicator)))
+#+END_SRC
+
+=embark-bindings= は次のように表示します:
+
+#+BEGIN_EXPORT markdown
+![03-embark-act-completing-read.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/62908209-a83f-40f9-a34c-6c363d7c606e.png)
+#+END_EXPORT
+
+これを見て Embark のキーバインドを覚えて行きたいと思います。
 
 #+BEGIN_QUOTE
-参考: [[https://github.com/oantolin/embark/issues/699][*Embark Actions* buffer pops up despite setting embark-promp to embark-completing-read-prompter #699]]
+本当は child frame に表示したいのですが、 /まだ/ ターミナルでは使えず、、
 #+END_QUOTE
+
+** Minibuffer 関連のナビゲーション
+
+以前より minibuffer 関連のナビゲーションを改善したいと思っていました。特に minibuffer とファイル探索、ファイル検索に改善の余地があります。
+
+*Embark は関係が無い* 設定も多そうですが、 1 つずつ試してみます。
+
+#+BEGIN_QUOTE
+以降の設定は僕の好みに過ぎず、他の人にもマッチするかは不明です。
+#+END_QUOTE
+
+*** =find-file= を使いたい
+
+=consult-find-file= ではなく =find-file= を使いたい理由として、 =find-file= の動きは =dired= (Emacs の組み込みのファイラー) に近いです。
+
+=consult-find-file= はサブディレクトリを含めた再帰的な検索を行い、 CWD 的の変更に相当する操作がありません。 =find-file= はプロンプト中のテキストが CWD に相当し、 CWD 中のファイルのみが絞り込みの対象になります:
+
+#+BEGIN_EXPORT md
+<img width="75%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/ec08c796-4204-43e4-9fce-f1a8d4035829.png">
+#+END_EXPORT
+
+*** =find-file= で =consult-preview-key= を有効化する
+
+早速 Embark ではなく Consult の設定ですが、 Wiki にある =consult-find-file-with-preview= 関数を定義すると、プレビュー機能付きの =find-file= ができます:
+
+#+BEGIN_QUOTE
+https://github.com/minad/consult/wiki#previewing-files-in-find-file
+#+END_QUOTE
+
+#+BEGIN_SRC elisp
+(leaf consult
+  :custom
+  ;; `C-l` 押下にてプレビューを表示:
+  (consult-preview-key  . "C-l")
+  ;; 常にプレビューを表示:
+  ;; (consult-preview-key  . "any")
+  :init
+  (progn ;; `find-file' with Consult preview
+    ;; https://github.com/minad/consult/wiki#previewing-files-in-find-file
+    (setq read-file-name-function #'consult-find-file-with-preview)
+    (defun consult-find-file-with-preview (prompt &optional dir default mustmatch initial pred)
+      (interactive)
+      (require 'consult) ;; 追加しました
+      (let ((default-directory (or dir default-directory))
+            (minibuffer-completing-file-name t))
+        (consult--read #'read-file-name-internal
+                       ;; Enter でファイルが開けませんでした:
+                       ;; :state (consult--file-preview)
+                       ;; Preview でき、 Enter でファイルを開けます:
+                       :state (consult--file-preview)
+                       :prompt prompt
+                       :initial initial
+                       :require-match mustmatch
+                       :predicate pred)))))
+#+END_SRC
+
+ただ、どうも上の定義だと =find-file= の挙動を変えるようで、ユーザ入力のテキスト中に PWD (=default-directory=) が表示されなくなります。 =../= を打てば上の階層に上がることもできますが、従来の =find-file= に慣れていると見通しが悪く感じます。
+
+以下の形で =consult-find-file-with-preview= を呼び出すと、通常の =find-file= と同じプロンプト、 =default-directory= になります:
+
+#+BEGIN_SRC elisp
+(consult-find-file-with-preview "Find file: " "/" nil nil default-directory)
+#+END_SRC
+
+見た目はただの =find-file= ですが、 Consult の preview ができます:
+
+#+BEGIN_EXPORT md
+<img width="75%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/ec08c796-4204-43e4-9fce-f1a8d4035829.png">
+#+END_EXPORT
+
+以降では、この =consult-find-file-with-preview= を指して =find-file= と書きます。
+
+*** =find-file= と dired を行き来する (=embark-export=)
+
+=find-file= から =dired= へ移行するためには、 =embark-act= から =embark-export= を選択すれば OK です。
+
+*** =find-file= と =consult-grep= を行き来する
+
+ミニバッファを使う間を移動するキーバインドを作って行きます。
+
+**** =find-file= -> =consult-ripgrep=
+
+まず =find-file= から =consult-ripgrep= への移行を (AI が) 実装します。
+
+Minibuffer を閉じてから、ユーザ関数を呼ぶためのユーティリティを定義します:
+
+#+BEGIN_SRC elisp
+  (defun my/abort-minibuffer-and-call (f)
+    "Utility function for unwinding the minibuffer and call a function."
+    (if (minibufferp)
+        (progn
+          (run-at-time 0 nil f)
+          (abort-recursive-edit))
+      (user-error "Not in a minibuffer")))
+#+END_SRC
+
+これを使って =find-file= から =consult-ripgrep= への移行を実装します:
+
+#+BEGIN_SRC elisp
+  (progn ;; `find-file' -> `consult-ripgrep'
+    (defun my/consult-ripgrep-from-find-file ()
+      (interactive)
+      (let ((dir (file-name-directory (minibuffer-contents))))
+        (my/abort-minibuffer-and-call
+         (lambda () (consult-ripgrep dir ". ")))))
+    (keymap-set minibuffer-mode-map "C-c g" #'my/consult-ripgrep-from-find-file))
+#+END_SRC
+
+Minibuffer では =C-c= のバインディングが空いていたため、 =C-c g= にバインドしました。
+
+**** =consult-ripgrep= -> =find-file=
+
+同様に、 =consult-ripgrep= から =find-file= への移行を実装します:
+
+#+BEGIN_SRC elisp
+  (progn ;; `consult-ripgrep' -> `find-file'
+    (defun my/find-file-from-consult-ripgrep ()
+      (interactive)
+      (my/abort-minibuffer-and-call
+      (lambda () (consult-find-file-with-preview "Find file: " "/" nil nil default-directory))))
+    (keymap-set minibuffer-mode-map "C-c f" #'my/find-file-from-consult-ripgrep))
+#+END_SRC
+
+こちらは =C-c f= に定義しました。以下のように 2 種類のミニバッファを行き来できるようになりました (=find-file= -> =consutl-ripgrep= -> =find-file=):
+
+#+BEGIN_EXPORT md
+![a.gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/9166e2ff-7fda-4291-95d4-c11380d7fd19.gif)
+#+END_EXPORT
+
+*** Minibuffer を出たら小さくする
+
+Minibuffer 中で =other-window= を
+現在 =vertico= 
+
+*** =find-file= を閉じずにファイルを開く
+
+*** =consult-grep= の結果をファイル単位で移動する
+
+*** =consult-grep= + =embark-export= + =wgrep=
+
+*** Minibuffer を閉じずに作業する
+
+人の作業画面を見ていて、 VSCode のサイドバーが良かったです。検索結果を残しつつ作業できて、邪魔にならない位置にあるのが良い感じです:
+
+#+BEGIN_EXPORT markdown
+<img width="30%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/f781ddb5-897a-4a8e-a956-7ca40c8a404b.png">
+#+END_EXPORT
+
+Emacs の minibuffer においても、
 
 *** Embark Export の出力先をサイドバーにする
 
