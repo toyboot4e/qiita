@@ -397,7 +397,7 @@ Embark の主な API は =embark-act= です。
 <img width="75%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/ec08c796-4204-43e4-9fce-f1a8d4035829.png">
 #+END_EXPORT
 
-一方、 =consult-find-file= はサブディレクトリを含めた再帰的な検索を行い、 CWD 的の変更に相当する操作がありません。
+一方、 =consult-find-file= はサブディレクトリを含めた再帰的な検索を行い、 CWD の変更に相当する操作がありません。
 
 *** =find-file= において =consult-preview-key= を有効化する
 
@@ -431,7 +431,7 @@ https://github.com/minad/consult/wiki#previewing-files-in-find-file
 #+END_SRC
 
 #+BEGIN_QUOTE
-Wiki 版と異なり Enter キーでファイルを開ける他、従来の =find-file= と同様に CWD を含めて入力欄に表示しています。
+Wiki 版と異なり Enter キーでファイルを開ける他、従来の =find-file= と同様に入力欄にフルパスを表示しています。
 #+END_QUOTE
 
 =Preview:= バッファを表示できています:
@@ -466,16 +466,18 @@ Wiki 版と異なり Enter キーでファイルを開ける他、従来の =fin
 以下の設定により、いつものフルパスの =find-file= にできました:
 
 #+BEGIN_SRC emacs-lisp
-  (progn ;; `find-file' via `embark-become' with CWD text
-    (defun my-embark-become-prepend-default-dir (orig-fun command input)
-      "Prepend default-directory to INPUT when COMMAND is file-related."
-      (if (and (memq command '(find-file find-file-other-window
-                                         find-file-other-frame find-file-literally))
-               (file-name-as-directory default-directory)
-               (not (string-prefix-p (expand-file-name default-directory)
-                                     (expand-file-name input))))
-          (funcall orig-fun command (expand-file-name input default-directory))
-        (funcall orig-fun command input)))
+    (progn ;; Show full path in `find-file' after `embark-become'
+      (defun my-embark-become-prepend-default-dir (orig-fun command input)
+        "Prepend default-directory to INPUT when COMMAND is file-related."
+        (if (and (memq command '(find-file find-file-other-window
+                                           find-file-other-frame find-file-literally))
+                 (not (string-prefix-p (expand-file-name default-directory)
+                                       (expand-file-name input))))
+            (let ((dir-with-slash (file-name-as-directory default-directory)))
+              (if (equal input "")
+                  (funcall orig-fun command dir-with-slash)
+                (funcall orig-fun command (expand-file-name input dir-with-slash))))
+          (funcall orig-fun command input)))
 
       (advice-add 'embark--become-command :around
                   #'my-embark-become-prepend-default-dir)))
@@ -497,7 +499,7 @@ Wiki 版と異なり Enter キーでファイルを開ける他、従来の =fin
 
 =other-window= で開いたウィンドウに移動できます。副作用があったらすみません。
 
-VSCode のサイドバーは検索結果を保持できて良さそうですが、 minibuffer も開きっぱなしにできるようになりました。もちろん =embark-export= で退避させても良さそうです。
+VSCode のサイドバーは検索結果を保持できて良さそうですが、 Emacs の minibuffer も開きっぱなしで作業できるようになりました。もちろん =embark-export= で退避させても良く、 VSCode とは違った方法で快適な環境を構築できたのではないかと思います。
 
 #+BEGIN_EXPORT markdown
 <img width="40%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/e34a1327-8df3-4e44-9771-57427dbbdcbc.png">
@@ -524,4 +526,17 @@ VSCode のサイドバーは検索結果を保持できて良さそうですが�
 =find-file= を積極的に使ったり、 =embark-become= で minibuffer コマンドを切り替えらえるようになりました。理想としては、任意の minibuffer コマンドの CWD を =find-file= で変更できると良さそうですが、まだまだ設定を積み重ねる必要がありそうです。
 
 それでは 3 日遅れの投稿となってしまいましたが、次の記事でお会いしましょう。
+
+* Emacs 精進 04: マーク管理とコードリーディング
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-04.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 4 日目の投稿です。
+
+** 背景
+
+** Bookmark+
+
+** まとめ
 
