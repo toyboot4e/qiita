@@ -536,7 +536,56 @@ VSCode のサイドバーは検索結果を保持できて良さそうですが�
 
 ** 背景
 
-** Bookmark+
+見慣れぬソースコードの読解に苦しんでいます。トピックごとにコードの位置を保存できれば楽になるのではないかと思います。たとえば何らかのバグの原因を調査している時、関連する関数の位置を記録しておけば、少しずつ繋がりが見えてくるようになります。
+
+一時的な調査であれば、ウィンドウ分割や =tab-bar-mode= で位置を保持すれば十分ですが、多数のファイルが関わってきたり、複数日にまたぐ作業の場合は、やはり何らかのファイルに永続化したいです。また文章である必要は無く、 =completing-read= で選択できる必要があります。
+
+いっそ GitHub からブラウザの縦型タブを見れば十分ではありますが、せっかくなので Emacs の中で完結させてます。おそらく [[https://www.emacswiki.org/emacs/BookmarkPlus][Bookmark+]] がこの機能に相当するので、使ってみます。
+
+** Bookmark を使用する
+
+*** Bookmark+
+
+Bookmark+ は長らく Emacs Wiki で開発・公開されているパッケージですが、 GitHub のミラーから引っ張ってくるのが簡単そうです。
+
+#+BEGIN_SRC elisp
+(leaf bookmark+
+  :ensure nil
+  :vc (:url "https://github.com/emacsmirror/bookmark-plus")
+  :custom
+  (;; Bookmark の変更時に bookmark ファイルを更新する
+   (bookmark-save-flag . 1)
+   ;; Bookmark ファイルの変更時に自動的に読み込む (y/n prompt 無しとする)
+   (bookmark-watch-bookmark-file . 'silent))
+#+END_SRC
+
+*** Bookmark ファイルの自動読み込み
+
+上記 =:custom= の通り、
+
+*** =consult-bookmark=
+
+=consult= で bookmark の選択ができます。 =embark-act= から bookmark の削除なども実施できます。
+
+*** Bookmark 名の重複
+
+=bookmark-set= で bookmark を追加できます。デフォルトの bookmark はファイル名ですが、重複する名前の bookmark は登録できません (暗黙的に却下されます) 。
+
+*** Bookmark のスコープ
 
 ** まとめ
+
+既に 8 日目となっており、今後の記事の内容は簡易化しようかと検討中です……。
+
+それでは次の記事でお会いしましょう！
+
+* 見た目
+
+*** =org-mode= のコードブロックを格好良く表示したい
+
+org-modern のここだけ欲しい
+
+*** 画面下部を格好良くしたい
+
+*** Minibuffer にスクロールバーが欲しい
 
