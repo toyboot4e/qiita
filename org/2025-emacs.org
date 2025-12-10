@@ -571,6 +571,8 @@ Bookmark+ は長らく Emacs Wiki で開発・公開されているパッケー�
 
 =bookmark-set= で bookmark を追加できます。デフォルトの bookmark はファイル名ですが、重複する名前の bookmark は登録できません (暗黙的に却下されます) 。
 
+=bmkp-propertize-bookmark-names-flag= を設定するとタグの追加が信じられないほど遅くなるので止めておきましょう。
+
 *** Bookmark の絞り込み
 
 =bookmark+= のコマンドは、接頭辞 =bmkp-= から始まります。
