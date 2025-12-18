@@ -536,60 +536,185 @@ VSCode のサイドバーは検索結果を保持できて良さそうですが�
 
 ** 背景
 
-見慣れぬソースコードの読解に苦しんでいます。トピックごとにコードの位置を保存できれば楽になるのではないかと思います。たとえば何らかのバグの原因を調査している時、関連する関数の位置を記録しておけば、少しずつ繋がりが見えてくるようになります。
+見慣れぬソースコードの読解に苦しんでいます。トピックごとにコードの位置を保存できれば、確認が簡単になるのではないかと思います。
 
-一時的な調査であれば、ウィンドウ分割や =tab-bar-mode= で位置を保持すれば十分ですが、多数のファイルが関わってきたり、複数日にまたぐ作業の場合は、やはり何らかのファイルに永続化したいです。また文章である必要は無く、 =completing-read= で選択できる必要があります。
+機能的には、ブラウザ (拡張) の縦型タブで十分です。重要なソース位置をタブとして持つことができます:
 
-いっそ GitHub からブラウザの縦型タブを見れば十分ではありますが、せっかくなので Emacs の中で完結させてます。おそらく [[https://www.emacswiki.org/emacs/BookmarkPlus][Bookmark+]] がこの機能に相当するので、使ってみます。
+#+BEGIN_EXPORT md
+<img width="50%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/2c5d6827-1711-4428-abe1-52ca027fd466.png">
+#+END_EXPORT
+
+しかし設定野郎の端くれとしては、テキストエディタをビューワーとしても充実させたいものです。 Emacs においては、 [[https://www.emacswiki.org/emacs/BookmarkPlus][Bookmark+]] により _bookmark_ にタグを付与できるようなので、使ってみます。
+
+#+BEGIN_EXPORT md
+:::note warn
+今回は、特に成果がありません。
+:::
+#+END_EXPORT
 
 ** Bookmark を使用する
 
-*** Bookmark+
+*** Mark とは
 
-Bookmark+ は長らく Emacs Wiki で開発・公開されているパッケージですが、 GitHub のミラーから引っ張ってくるのが簡単そうです。
+Mark はカーソル位置 (_point_) を表すデータです。 [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Mark-Ring.html][Mark ring]] が普段からカーソル位置の変化を記録しており、 =consult-mark= で確認できます。 Mark は一時的なデータであり、 Emacs の終了時に失われます。
+
+*** Bookmark とは
+
+[[https://www.gnu.org/software/emacs/manual/html_node/emacs/Bookmarks.html][Bookmarks]] はファイル保存される mark のことだと思います。 Builtin の bookmark はフラットな一覧であるため、これらにタグを付けてフィルタリングして行きたいです。
+
+*** Bookmark, Bookmark+
+
+[[https://www.emacswiki.org/emacs/BookmarkPlus][Bookmark+]] は Emacs Wiki で開発・公開されているパッケージです。最新版にこだわりがなければ、 [[https://github.com/emacsmirror/bookmark-plus][GitHub のミラー]] から引っ張ってくるのが簡単そうです:
 
 #+BEGIN_SRC elisp
 (leaf bookmark+
   :ensure nil
-  :vc (:url "https://github.com/emacsmirror/bookmark-plus")
-  :custom
-  (;; Bookmark の変更時に bookmark ファイルを更新する
-   (bookmark-save-flag . 1)
-   ;; Bookmark ファイルの変更時に自動的に読み込む (y/n prompt 無しとする)
-   (bookmark-watch-bookmark-file . 'silent))
+  :vc (:url "https://github.com/emacsmirror/bookmark-plus"))
 #+END_SRC
 
-*** Bookmark ファイルの自動読み込み
+#+BEGIN_EXPORT md
+:::note warn
+設定不足で恐縮です。
 
-上記 =:custom= の通り、
+Bookmark ファイルの更新は、 Emacs の終了時などまで遅延されます。 Bookmark の一時的な状態がメモリ上のみに存在するため、 Emacs が異常終了した場合にデータが失われる他、複数の Emacs 間の同期が取れません。
 
-*** =consult-bookmark=
+また Bookmark の変更の度にファイル保存する設定もありますが、 `bookmark+` の関数 (`bmkp-*`) のパフォーマンスが極端に落ちたため未設定です。
+:::
+#+END_EXPORT
 
-=consult= で bookmark の選択ができます。 =embark-act= から bookmark の削除なども実施できます。
+*** 実装
 
-*** Bookmark 名の重複
+**** Bookmark 保存
 
-=bookmark-set= で bookmark を追加できます。デフォルトの bookmark はファイル名ですが、重複する名前の bookmark は登録できません (暗黙的に却下されます) 。
+Bookmark を以下の形で保存したいです:
 
-=bmkp-propertize-bookmark-names-flag= を設定するとタグの追加が信じられないほど遅くなるので止めておきましょう。
+- 名称: =dir/file.exe:line= (自動設定)
+- タグ: =repository/topic= (トピック部分はユーザ指定)
 
-*** Bookmark の絞り込み
+これらの計算用の関数です:
 
-=bookmark+= のコマンドは、接頭辞 =bmkp-= から始まります。
+#+BEGIN_SRC elisp
+(defun my/get-default-bookmark-name ()
+  "dir/file.exe:line"
+  (let* ((root (vc-git-root default-directory))
+         (line (line-number-at-pos)))
+    (format "%s:%d" (file-relative-name (buffer-file-name) root) line)))
 
-ジャンプ先を type, tag, ジャンプ先で絞り込むことができます。
+(defun my/project-like-name ()
+  "git root name or a fallback"
+  (file-name-nondirectory
+   (directory-file-name
+    (or (vc-git-root default-directory)
+        (directory-file-name default-directory)
+        (buffer-name)))))
+#+END_SRC
 
-*** Bookmark のスコープ
+これを元にカーソル位置を bookmark として保存するコマンドを作成しました:
 
-Navigation list という概念があり、
+#+BEGIN_SRC elisp
+(defun my/bookmark-set ()
+  "Create a bookmark at point with automatic file-based naming and auto tag."
+  (interactive)
+  (let ((bookmark-name (my/get-default-bookmark-name))
+        (tag-name (consult-bookmark-tags-with-default "Tag: " t)))
+    (let ((inhibit-message t))
+      (bookmark-set bookmark-name nil t)
+      (bmkp-add-tags bookmark-name `(,tag-name)))
+    (message "Bookmark created: %s (tag: %s)" bookmark-name tag-name)))
+#+END_SRC
 
-*** Bookmark のメモ
+**** Bookmark を確認
 
-annotation
+Bookmark をタグ付きで確認するため、 =consult-bookmark= の candidates を書き換えてみました:
+
+#+BEGIN_SRC elisp
+(defun my/consult--bookmark-candidates ()
+  "Return bookmark candidates."
+  (require 'bookmark+)
+  (cl-loop for bm in bookmark-alist collect
+           (let* ((name (car bm))
+                  (tags (bmkp-get-tags bm))
+                  (line-content (let ((filename (bookmark-get-filename bm))
+                                      (pos (bookmark-get-position bm)))
+                                  (cond
+                                   ((and filename pos (file-exists-p filename) (not (file-directory-p filename)))
+                                    (with-temp-buffer
+                                      (insert-file-contents filename)
+                                      (goto-char pos)
+                                      (string-trim (thing-at-point 'line t))))
+                                   ((and filename (file-directory-p filename))
+                                    (format "[Directory: %s]" (file-name-nondirectory filename)))
+                                   (filename
+                                    (format "[File: %s]" (file-name-nondirectory filename)))
+                                   (t "[Buffer]"))))
+                  (tags-str (if tags
+                                (propertize (mapconcat #'identity tags ", ") 'face 'consult-key)
+                              ""))
+                  ;; We're embedding nerd icon here..
+                  (display-name (format "%-30s %-20s %s" (concat (nerd-icons-icon-for-file name) " " name) tags-str
+                                        (propertize (or line-content "") 'face 'completions-annotations))))
+             (propertize display-name
+                         'consult--candidate name))))
+#+END_SRC
+
+最悪ですが、 =consult-bookmark= をコピペして、上の candidates を使ってみます:
+
+#+BEGIN_SRC elisp
+(defun my/consult-bookmark-with-tags (name)
+  "`consult-bookmark' with another candidates definition"
+  (interactive
+   (list
+    (require 'consult)
+    (bookmark-maybe-load-default-file)
+    (setq bookmark-alist (my/bookmark-sort bookmark-alist))
+    (let ((narrow (cl-loop for (x y . _) in consult-bookmark-narrow collect (cons x y))))
+      (consult--read
+       (my/consult--bookmark-candidates)
+       :prompt "Bookmark: "
+       :state (consult--bookmark-preview)
+       :category 'bookmark
+       :history 'bookmark-history
+       :initial (or my/bookmark-auto-tag "")
+       ;; Add default names to future history.
+       ;; Ignore errors such that `consult-bookmark' can be used in
+       ;; buffers which are not backed by a file.
+       :add-history (ignore-errors (bookmark-prop-get (bookmark-make-record) 'defaults))
+       :group (consult--type-group narrow)
+       :narrow (consult--type-narrow narrow)
+       :lookup #'consult--lookup-candidate))))
+  (bookmark-maybe-load-default-file)
+  (if (assoc name bookmark-alist)
+      (bookmark-jump name)
+    (bookmark-set name)))
+#+END_SRC
+
+それっぽくなりましたが、おかしな挙動が多くて無念です。
+
+まず、ソートできていません。最低限、 2 列目のタグでソートできるべきです:
+
+#+BEGIN_EXPORT md
+![Screenshot 2025-12-19 at 5.54.30.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/72c917e7-a190-4dd7-9cd3-f4b68aa3d46f.png)
+#+END_EXPORT
+
+またタグまで候補の名前になっています:
+
+#+BEGIN_EXPORT md
+![Screenshot 2025-12-19 at 5.54.49.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/4b06019c-f021-41db-a644-2d129da90938.png)
+#+END_EXPORT
+
+一方で、タグによる絞り込みができません orz:
+
+#+BEGIN_EXPORT md
+![Screenshot 2025-12-19 at 5.54.53.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/097c15f7-2fb4-41fe-bd30-b738ad765aaf.png)
+#+END_EXPORT
+
+=embark-act= からの削除もできませんでした。他にも無数に問題があって手に負えません。
 
 ** まとめ
 
-既に 9 日目となっており、今後の記事の内容はより小さな内容にしようと思います。
+Bookmark にスコープを持たせて =completing-read= から選びたい。ただそれだけの設定が果てしなく遠く、ワークフローの改善には至りませんでした。
+
+設定から逃げ続けている間に、何と登校日が 12 月 19 日に……。
 
 それでは次の記事でお会いしましょう！
 
