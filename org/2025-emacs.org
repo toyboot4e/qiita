@@ -558,6 +558,8 @@ VSCode のサイドバーは検索結果を保持できて良さそうですが�
 
 Mark はカーソル位置 (_point_) を表すデータです。 [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Mark-Ring.html][Mark ring]] が普段からカーソル位置の変化を記録しており、 =consult-mark= で確認できます。 Mark は一時的なデータであり、 Emacs の終了時に失われます。
 
+と書いてみたのですが、 100% 間違いを含む説明で申し訳ありません。
+
 *** Bookmark とは
 
 [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Bookmarks.html][Bookmarks]] はファイル保存される mark のことだと思います。 Builtin の bookmark はフラットな一覧であるため、これらにタグを付けてフィルタリングして行きたいです。
@@ -588,14 +590,14 @@ Bookmark ファイルの更新は、 Emacs の終了時などまで遅延され�
 
 Bookmark を以下の形で保存したいです:
 
-- 名称: =dir/file.exe:line= (自動設定)
+- 名称: =dir/file.ext:line= (自動設定)
 - タグ: =repository/topic= (トピック部分はユーザ指定)
 
 これらの計算用の関数です:
 
 #+BEGIN_SRC elisp
 (defun my/get-default-bookmark-name ()
-  "dir/file.exe:line"
+  "dir/file.ext:line"
   (let* ((root (vc-git-root default-directory))
          (line (line-number-at-pos)))
     (format "%s:%d" (file-relative-name (buffer-file-name) root) line)))
@@ -609,7 +611,7 @@ Bookmark を以下の形で保存したいです:
         (buffer-name)))))
 #+END_SRC
 
-これを元にカーソル位置を bookmark として保存するコマンドを作成しました:
+これを元に、カーソル位置をタグ付きで bookmark として保存するコマンドを作成しました:
 
 #+BEGIN_SRC elisp
 (defun my/bookmark-set ()
@@ -622,6 +624,36 @@ Bookmark を以下の形で保存したいです:
       (bmkp-add-tags bookmark-name `(,tag-name)))
     (message "Bookmark created: %s (tag: %s)" bookmark-name tag-name)))
 #+END_SRC
+
+**** タグの検索
+
+上記では、以下の関数を使ってタグを選ぶか、新しいタグを設定します:
+
+#+BEGIN_SRC elisp
+(defun consult-bookmark-tags (&optional prompt default-tag allow-new-p)
+  (interactive)
+  (require 'bookmark+)
+  (let ((tags (bmkp-tags-list nil t)))
+    (completing-read
+     (or prompt "Tags: ")
+     tags
+     nil  ; No predicate
+     (not allow-new-p)  ; Require match if new tags not allowed
+     default-tag ; initial input
+     nil  ; No hist
+     default-tag ; default (fallback) value
+     )))
+
+(defun consult-bookmark-tags-with-default (&optional prompt allow-new-p)
+  "`consult-bookmark-tags' with `<project>/' as the default tag name."
+  (consult-bookmark-tags prompt (concat (my/project-like-name) "/") allow-new-p))
+#+END_SRC
+
+これはちゃんと動いてくれます:
+
+#+BEGIN_EXPORT md
+<img width="50%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/7e886fd4-fce8-4fc9-b2c4-e59d4865d1e8.png">
+#+END_EXPORT
 
 **** Bookmark を確認
 
@@ -696,7 +728,7 @@ Bookmark をタグ付きで確認するため、 =consult-bookmark= の candidat
 ![Screenshot 2025-12-19 at 5.54.30.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/72c917e7-a190-4dd7-9cd3-f4b68aa3d46f.png)
 #+END_EXPORT
 
-またタグまで候補の名前になっています:
+また行の内容まで候補の名前に含まれています:
 
 #+BEGIN_EXPORT md
 ![Screenshot 2025-12-19 at 5.54.49.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/4b06019c-f021-41db-a644-2d129da90938.png)
@@ -714,9 +746,83 @@ Bookmark をタグ付きで確認するため、 =consult-bookmark= の candidat
 
 Bookmark にスコープを持たせて =completing-read= から選びたい。ただそれだけの設定が果てしなく遠く、ワークフローの改善には至りませんでした。
 
-設定から逃げ続けている間に、何と登校日が 12 月 19 日に……。
+Bookmark, consult, marginalia など全て重い！　設定から逃げ続けている間に、何と投稿日が 12 月 19 日に……。
 
 それでは次の記事でお会いしましょう！
+
+* Emacs 精進 05: 再現可能な Zenn Book を書く
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-05.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 5 日目の投稿です。
+
+** 背景
+
+*** 文脈、前提条件
+
+Zenn Book を org-mode で書いた流れがあります:
+
+https://zenn.dev/toyboot4e/articles/write-org-for-great-good
+
+以降では Nix をユーザを前提とします。
+
+*** 今回のテーマ
+
+[[https://github.com/AntonHakansson/org-nix-shell][=org-nix-shell=]] でどこまでコードブロックの評価を Nix 化できるか探りたい。そんな記事を妄想していました。今、タスクが重過ぎて絶望しています。
+
+このカレンダーでは事前にタイトルを決めており、内容が乖離・破綻しても変更していません (良くない) 。今回もダメかもしれませんが、やるだけやってみましょう！
+
+** =org-nix-shell= 導入へ
+
+*** インストール
+
+何はともあれ、 [[https://github.com/AntonHakansson/org-nix-shell][=org-nix-shell=]] を入れてみます:
+
+#+BEGIN_SRC elisp
+(leaf org-nix-shell
+  :hook (org-mode-hook . org-nix-shell-mode))
+#+END_SRC
+
+これにより、 devShell の定義を元にコードブロックを評価できるようになるはずです。
+
+*** インタープリタ言語の babel
+
+#+BEGIN_SRC org
+,#+name: example-shell
+,#+BEGIN_SRC nix
+{ pkgs ? import <nixpkgs> {} }:
+pkgs.mkShell {
+  buildInputs = with pkgs; [
+    python3
+  ];
+}
+,#+END_SRC
+
+,#+BEGIN_SRC python :nix-shell "example-shell"
+print("hello")
+,#+END_SRC
+#+END_SRC
+
+#+BEGIN_EXPORT md
+![Screenshot 2025-12-19 at 6.44.46.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/d204ad12-7259-4bd0-bcdd-528dfb037f10.png)
+#+END_EXPORT
+
+*** コンパイル言語の babel
+
+#+name: example-shell
+#+BEGIN_SRC nix
+{ pkgs ? import <nixpkgs> {} }:
+pkgs.mkShell {
+  buildInputs = with pkgs; [
+    python3
+  ];
+}
+#+END_SRC
+
+*** あのバージョンの Haskell が欲しい
+
+nixpkgs 上の Haskell は冷遇気味で、
 
 * 見た目
 
