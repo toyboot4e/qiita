@@ -1211,17 +1211,31 @@ https://github.com/kaushalmodi/.emacs.d/blob/2612774caabe9e84b6a2d45f017f97e7f07
 
 *** =magit-blame=
 
-Magit blame は blame のインライン表示といった機能です。僕はこれが見づらくて、実のところ GitHub の blame を見ています。ブラウザからならば PR の内容にも飛べるので、残念ながら一部のリーダーとしての機能はテキストエディタに勝ると思います。
+Magit blame は blame のインライン表示といった機能です。僕にはこれが見づらくて、実のところ GitHub の blame を見ています。ブラウザからならば PR の内容にも飛べるので、リーダーとしての機能がテキストエディタに勝る面もあると思います。
+
+#+BEGIN_EXPORT md
+![07-magit-blame.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/bad6fbc6-82db-41c4-9077-72e90abbd202.png)
+#+END_EXPORT
 
 VSCode のようにカーソル下に変更履歴を出したい場合は、 [[https://github.com/Artawower/blamer.el][=blamer.el=]] を使うことができます。
 
 *** Hunk の内容
 
-=magit-status= 中の diff に行番号が表示されないのは宿命だと思います。
+=magit-status= 中の diff に行番号が表示されないのは宿命だと思います。こうしてみると、それなりの妥協点がありますね。
+
+*** おまけ
+
+おまけとしてカーソル位置の行を GitHub で開く関数を……と思いきや、 [[https://github.com/rmuslimov/browse-at-remote][=browse-at-remote=]] を使うのが良さそうです:
+
+#+BEGIN_SRC elisp
+(leaf browse-at-remote)
+#+END_SRC
+
+Qiita の規約上、全ての記事が Idea ではなく Tech であるべきという方針なので、一応技術的内容にあたるセクションを作ってみました。
 
 ** まとめ
 
-Magit について管を巻いてみました。そんなにハードな Emacs ユーザではないことを自覚してしましました。難しい機能は使わなければ良いとしています。
+Magit について管を巻いてみましたが、そんなにハードな Emacs ユーザではないことを自覚してしましました。難しい機能は使わなければ良い、そんな弱者の戦略でやりくりしています。皆さんは Emacs や Magit を使いこなせていますか？
 
 それでは次の記事でお会いしましょう！
 
