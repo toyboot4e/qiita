@@ -759,34 +759,34 @@ Bookmark, consult, marginalia など全て重い！　設定から逃げ続け�
 
 ** 背景
 
-*** 文脈、前提条件
+*** 文脈
 
 Zenn Book を org-mode で書いた流れがあります:
 
+#+BEGIN_EXPORT md
 https://zenn.dev/toyboot4e/articles/write-org-for-great-good
+#+END_EXPORT
 
-以降では Nix をユーザを前提とします。
+ここで全てのコードブロックをコンパイル可能にすれば、コンパイラのバージョンアップへの追従など楽になるのではないかと思いました。やってみましょう。
 
-*** 今回のテーマ
+** コードブロック評価の再現性向上
 
-[[https://github.com/AntonHakansson/org-nix-shell][=org-nix-shell=]] でどこまでコードブロックの評価を Nix 化できるか探りたい。そんな記事を妄想していました。今、タスクが重過ぎて絶望しています。
+*** [[https://github.com/AntonHakansson/org-nix-shell][=org-nix-shell=]] を試してみる
 
-このカレンダーでは事前にタイトルを決めており、内容が乖離・破綻しても変更していません (良くない) 。今回もダメかもしれませんが、やるだけやってみましょう！
+コードブロックの評価環境を Nix で定義すれば良いではないか！ ([[https://www.takeokunn.org/posts/fleeting/20250126140928-introduction_org_nix_shell/][org-nix-shell入門]])
 
-** =org-nix-shell= 導入へ
-
-*** インストール
-
-何はともあれ、 [[https://github.com/AntonHakansson/org-nix-shell][=org-nix-shell=]] を入れてみます:
+[[https://github.com/AntonHakansson/org-nix-shell][=org-nix-shell=]] を入れてみます:
 
 #+BEGIN_SRC elisp
 (leaf org-nix-shell
   :hook (org-mode-hook . org-nix-shell-mode))
 #+END_SRC
 
-これにより、 devShell の定義を元にコードブロックを評価できるようになるはずです。
+これで devShell の定義を元にコードブロックを評価できるようになります。 =nix run= ほど再現性は高くありませんが、概ね期待通りにコードブロックを評価できるようになるのではないでしょうか。
 
-*** インタープリタ言語の babel
+**** README の例より
+
+まずは最も簡単な例から:
 
 #+BEGIN_SRC org
 ,#+name: example-shell
@@ -799,38 +799,429 @@ pkgs.mkShell {
 }
 ,#+END_SRC
 
-,#+BEGIN_SRC python :nix-shell "example-shell"
+,#+BEGIN_SRC python :nix-shell "example-shell" :results output
 print("hello")
 ,#+END_SRC
 #+END_SRC
+
+前途多難です:
 
 #+BEGIN_EXPORT md
 ![Screenshot 2025-12-19 at 6.44.46.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/d204ad12-7259-4bd0-bcdd-528dfb037f10.png)
 #+END_EXPORT
 
-*** コンパイル言語の babel
+=(require 'ob-python)= で強制的にコード実行させられました:
 
-#+name: example-shell
-#+BEGIN_SRC nix
-{ pkgs ? import <nixpkgs> {} }:
-pkgs.mkShell {
-  buildInputs = with pkgs; [
-    python3
-  ];
-}
+#+BEGIN_SRC org
+,#+BEGIN_SRC python :nix-shell "example-shell" :results output
+print("hello")
+,#+END_SRC
+
+,#+RESULTS:
+: hello
 #+END_SRC
 
-*** あのバージョンの Haskell が欲しい
+**** Babel が辛い
 
-nixpkgs 上の Haskell は冷遇気味で、
+スクリプト実行に対応していない言語だと、設定が相当大変です。また記事を書いている際に、全てのコード片が実行可能とは限らないのも紛らわしい点だと思います。
 
-* 見た目
+やはりピーキー過ぎたので、今は =org-nix-shell= や babel を真面目に設定するのは止めておきます。
 
-*** =org-mode= のコードブロックを格好良く表示したい
+*** [[https://orgmode.org/manual/Include-Files.html][=#+INCLUDE=]] に逃げる
 
-org-modern のここだけ欲しい
+[[https://orgmode.org/manual/Include-Files.html][=#+INCLUDE=]] を使って外部ファイルの一部を取り込むことができます。たとえば次のソースファイルの一部を =org= ファイルにコードブロックとして取り込むことにします:
 
-*** 画面下部を格好良くしたい
+#+BEGIN_SRC py
+print("hello 1")
 
-*** Minibuffer にスクロールバーが欲しい
+# begin -->
+print("hello 2")
+# <-- end
+#+END_SRC
+
+**** 行番号指定
+
+=:lines= で半開区間を読み込みできます:
+
+#+BEGIN_SRC org
+#+INCLUDE: "./2025-emacs/a.py" src python :lines "1-4"
+#+END_SRC
+
+以下の通り \([1, 4)\) 行が出力されます:
+
+#+INCLUDE: "./2025-emacs/a.py" src python :lines "1-4"
+
+*** マッチする部分を指定する (失敗)
+
+=:lines= のドキュメントを注意深く読んでみます:
+
+#+BEGIN_QUOTE
+Inclusions may specify a file-link to extract an object matched by [[https://orgmode.org/manual/Search-Options.html][org-link-search]] (see Search Options in File Links).
+#+END_QUOTE
+
+部分マッチが使えますね。試しに =# begin -->= 行を抜き出してみます:
+
+#+BEGIN_SRC org
+#+INCLUDE: "./2025-emacs/a.py" src python :lines "/begin/"
+#+END_SRC
+
+出力結果は次のようになります:
+
+#+INCLUDE: "./2025-emacs/a.py" src python :lines "/begin/"
+
+無理でした。ああ……
+
+*** インライン表示
+
+=#+INCLUDE= されたコードをエディタ上で表示するため、 [[https://github.com/yibie/org-include-inline][=org-include-inline=]] を導入しましょう。
+
+#+BEGIN_SRC elisp
+(leaf org-include-inline
+  :ensure nil
+  :vc (:url "https://github.com/yibie/org-include-inline")
+  :after org)
+#+END_SRC
+
+導入前:
+
+#+BEGIN_EXPORT md
+![05-before-inline.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/7c3e1c54-f60a-47ea-9611-adb0fc1e86ad.png)
+#+END_EXPORT
+
+導入後:
+
+#+BEGIN_EXPORT md
+![05-after-inline.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/e172787e-a58e-43bb-9e8b-2b523363eac6.png)
+#+END_EXPORT
+
+結局、富める者の元に全てが集結するってワケ！　キュピーン★
+
+** まとめ
+
+=org-babel= に過度な期待をせず、昔ながらの [[https://orgmode.org/manual/Include-Files.html][=#+INCLUDE=]] を使って外部ファイルを読み込めば良いのではないか、という運用の記事でした。当たり前の内容かもしれませんが、僕にとっては盲点でした。 =:lines= が行番号指定なのは辛いので、更なる設定が必要そうです。
+
+それでは次の記事でお会いしましょう！
+
+* Emacs 精進 06: (WIP) lsp-bridge + org-mode
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-06.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 6 日目の投稿です。
+
+** 背景
+
+Emacs の LSP クライアントは乱立しています。 Emacs 組み込みの =eglot=, UI がリッチな =lsp-mode= に加え、高速なクライアントが続々と……！
+
+*** コードブロックのハイライト
+
+=org-mode= を始めとしたマークアップ言語の悩みの一つが、コードブロックが正しくハイライトされないというものです:
+
+#+BEGIN_SRC org
+,#+BEGIN_SRC elisp
+(leaf org-nix-shell
+  :after org
+  :hook (org-mode-hook . org-nix-shell-mode))
+,#+END_SRC
+
+,#+BEGIN_SRC haskell
+solve :: StateT BS.ByteString IO ()
+solve = do
+  !n <- intP
+  !fromVals <- U.replicateM n ints2P
+,#+END_SRC
+#+END_SRC
+
+これをエディタ上で見ると:
+
+#+BEGIN_EXPORT md
+![06-highlight.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/b05a394f-f1f3-4beb-b97c-d409f8b04bbf.png)
+#+END_EXPORT
+
+ハイライト、されていました……。 =tree-sitter= も稼働した、メジャーモード並みの完璧なハイライトです。もう満足してしまいました。
+
+*** LSP の導入
+
+[[https://github.com/manateelazycat/lsp-bridge][=lsp-bridge=]] には =org-mode= 用の LSP が同封されているため、あわよくば構文エラーも効くかもしれません。やってみましょう。
+
+** [[https://github.com/manateelazycat/lsp-bridge][=lsp-bridge=]] を使ってみる (失敗)
+
+*** インストール
+
+#+BEGIN_SRC exs
+defmodule Hello do
+	def world do
+		IO.puts "Hello world"
+	end
+end
+Hello.world
+#+END_SRC
+
+README に記載の Python パッケージおよび、必須の ELisp パッケージをインストールします:
+
+#+BEGIN_SRC elisp
+(leaf markdown-mode)
+(leaf yasnippet)
+
+(leaf lsp-bridge
+  :ensure nil
+  :vc (:url "https://github.com/manateelazycat/lsp-bridge")
+  :hook (org-mode-hook . lsp-bridge-mode)
+  :custom
+  ((lsp-bridge-enable-org-babel . t)
+   (lsp-bridge-org-babel-lang-list . '("emacs-lisp" "haskell"))))
+#+END_SRC
+
+=yasnippet= を入れていないと、ほぼ操作不能になりました。間接依存として自動で入れてくれないんでしょうか。
+
+=corfu= を始めとした補完パッケージは無効化するように、との注意書きがあるため、従います。
+
+バイトコンパイル等にも厳しい制約がありますね:
+
+#+BEGIN_QUOTE
+Please do not perform =byte compilation= or =native compilation= for =lsp-bridge= as it will result in a difference in API and the latest version after upgrading compiling afterwards, Lsp-bridge is designed with multi-threading that does not require compilation to speed it up
+#+END_QUOTE
+
+**** Python
+
+=nix-direnv= で入れた Python パッケージが認識されなかったので、 =venv= で入れました:
+
+#+BEGIN_SRC sh
+$ python3 -m venv .venv
+$ source .venv/bin/activate.fish
+$ pip install epc orjson sexpdata six setuptools paramiko rapidfuzz watchdog packaging
+#+END_SRC
+
+**** LSP
+
+さらに org-mode 用 LSP ([[https://github.com/metaescape/Wen][Wen]] の方) をインストールします:
+
+#+BEGIN_SRC sh
+$ pip install pygls pypinyi
+Collecting pygls
+  Downloading pygls-2.0.0-py3-none-any.whl.metadata (4.5 kB)
+ERROR: Ignored the following versions that require a different python version: 0.12 Requires-Python >=3.7,<3.11; 0.12.1 Requires-Python >=3.7,<3.11; 0.12.3 Requires-Python >=3.7,<3.12; 0.12.4 Requires-Python >=3.7,<3.12; 0.12rc1 Requires-Python >=3.7,<3.11; 0.13.0 Requires-Python >=3.7,<3.12; 0.13.1 Requires-Python >=3.7,<3.12; 1.0.0 Requires-Python >=3.7,<3.12; 1.0.0a2 Requires-Python >=3.7,<3.12; 1.0.0a3 Requires-Python >=3.7,<3.12
+ERROR: Could not find a version that satisfies the requirement pypinyi (from versions: none)
+#+END_SRC
+
+Out-of-the box で動かなかったので、 [[https://github.com/iamcco/ds-pinyin-lsp][=ds-pinyin-lsp=]] の方をインストールします:
+
+#+BEGIN_SRC sh
+$ cargo install ds-pinyin-lsp
+#+END_SRC
+
+[[https://github.com/iamcco/ds-pinyin-lsp/releases][Releases]] から =dict.db3= を =~/.emacs.d/ds-pinyin/= (ではなく、 =init.el= があるディレクトリ) に保存します。
+=lsp-bridge-use-ds-pinyin-in-org-mode= を =t= にして、パーティーの始まりです！
+
+#+BEGIN_SRC txt
+--- [21:40:46.158389] Send textDocument/didSave notification to 'ds-pinyin' for project qiita
+#+END_SRC
+
+……確かにコードブロックの編集ごとのメッセージを送っているみたいなんですが、
+
+** まとめ
+
+[[https://github.com/manateelazycat/lsp-bridge][=lsp-bridge=]] には可能性を感じるものの、僕のためのツールではないことは明らかでした。
+
+それでは、次の記事でお会いします！
+
+* Emacs 精進 07: Emasc の見た目が良くない
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-07.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 7 日目の投稿です。
+
+** 背景
+
+どうも Emacs の見た目がパっとしません:
+
+#+BEGIN_EXPORT md
+![07-my-emacs.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/e88e9eb5-3bd7-4fe6-9675-7a1de3453f73.png)
+#+END_EXPORT
+
+*** 良い点
+
+この辺りは気に入っています:
+
+1. 無駄な UI (不必要に分厚いタブ、巨大なスペースなど) がありません
+2. [[https://github.com/rainstormstudio/nerd-icons.el][=nerd-icons.el=]] により、ターミナル上でもアイコンが表示しています
+3. [[https://github.com/tarsius/minions][=minions=]] により、マイナーモードがステータスバーから隠蔽されています
+
+*** 悪い点
+
+手放しで『美しい』とは言えない何かがあります:
+
+1. 行番号付近の diff の表示が綺麗ではありません
+2. ステータスバーの表示内容が未だ煩雑です
+3. ウィジェットの境界線が美しくありません
+
+** 改善
+
+*** 1. Diff の表示
+
+ターミナル上で [[https://github.com/dgutov/diff-hl][=diff-hl=]] が分厚く表示している点が問題です。 GUI ではもっと細い線で描かれます (fringe):
+
+#+BEGIN_EXPORT md
+![07-my-emacs-gui.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/f21336b0-769a-45b3-a5cd-498facbc8a1d.png)
+#+END_EXPORT
+
+行番号の _face_ を使って diff を表現できれば良いのですが、設定項目は =line-number=, =line-number-current-line= しか無さそうです。したがって *設定不可能* だと分かりました。
+
+#+BEGIN_QUOTE
+あるいはバッファ側に描いてくれても良いですが。
+#+END_QUOTE
+
+*** 2. ステータスバーの表示内容を簡潔にする
+
+[[https://github.com/seagle0128/doom-modeline][=doom-modeine=]] を使っています。意外と削るところが無いですね……:
+
+#+BEGIN_EXPORT md
+![07-modeline.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/849989f8-8088-4a40-b723-a3c749105a77.png)
+#+END_EXPORT
+
+以下を修正してみます:
+
+- =line:col= が暗黙的なので、 [[https://github.com/rainstormstudio/nerd-icons.el][=nerd-icons.el=]] で =ln=, =cl= を表示してみます
+- スクロール % の替わりにファイル行数を表示してみます
+
+#+BEGIN_SRC diff
+(leaf doom-modeline
+  :url "https://github.com/seagle0128/doom-modeline"
+  :after nerd-icons
+  :custom ((doom-modeline-icon . t)
+           (doom-modeline-major-mode-icon . t)
+           (doom-modeline-modal . t)
+           (doom-modeline-buffer-encoding)
++           (doom-modeline-percent-position)
++           (doom-modeline-total-line-number . t)
+           (doom-modeline-buffer-file-name-style quote truncate-upto-project))
+  :config
++  (setq doom-modeline-position-column-line-format
++        `(,(format "%s%%l %s%%c"
++                (char-to-string #xE0A1)
++                (char-to-string #xe0a3))))
+  (doom-modeline-mode))
+#+END_SRC
+
+#+BEGIN_EXPORT md
+![07-modeline-with-nerd-icons.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/49affee5-b399-44d7-8403-b1a115df3022.png)
+#+END_EXPORT
+
+……さらに見づらくなってしましました。
+
+*** 3. ウィジェットの境界線を美しくする
+
+最近自ブログにサイドバーを導入したのですが、この境界線は良く引けていると思います:
+
+#+BEGIN_EXPORT md
+![07-border-is-awesome.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/6f46b7b4-c034-4e43-a73f-284db9be8f8d.png)
+#+END_EXPORT
+
+このように padding を付けて線を引ければ良い感じになると思います。一方で、この手の設定がスペースを大幅に無駄にすると、本当にしょうもない UI に付き合わされたとムカムカしてくるので、バランスが大事です！
+
+以下の記事によると、 [[https://github.com/protesilaos/spacious-padding][=spacious-padding=]] によって modeline に鮮やかな線を描けることが分かります:
+
+#+BEGIN_EXPORT md
+https://qiita.com/nobuyuki86/items/122e85b470b361ded0b4
+#+END_EXPORT
+
+やってみました。 GUI 限定ですが、 modeline に鮮やかな線を描くことができました:
+
+#+BEGIN_EXPORT md
+![07-border-spacious-padding.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/af20ca08-f8ac-4c6b-8483-3228068a0b05.png)
+#+END_EXPORT
+
+しかし非常に強引な方法を用いており、線を描けるのは modeline に限られるようです。やはり *理想的な設定は不能* であることが分かりました。
+
+一応、 modeline に線を引くだけの設定はこちらです:
+
+#+BEGIN_SRC elisp
+(leaf spacious-padding
+  :config
+  (setq spacious-padding-widths
+        '( :internal-border-width 0
+           :header-line-width 0
+           :mode-line-width 0
+           :tab-width 0
+           :right-divider-width 0
+           :scroll-bar-width 0))
+
+  (setq spacious-padding-subtle-frame-lines
+        '( :mode-line-active spacious-padding-line-active
+           :mode-line-inactive spacious-padding-line-inactive
+           :header-line-active spacious-padding-line-active
+           :header-line-inactive spacious-padding-line-inactive))
+
+  (spacious-padding-mode +1))
+#+END_SRC
+
+** まとめ
+
+やりたかった見た目の設定が、概ね *不可能である* ことが分かりました。 [[https://github.com/rougier][rougier]] 氏 ([[https://github.com/rougier/nano-emacs][nano-emacs]] 作者) の設定などは、 Emacs の機能的にギリギリの設定だったのではないかと思います。
+
+Emacs が Emacs であるが故にできない設定があり、おそらく Electron (VSCode) では容易に実現できるであろう点が印象的でした。 Emacs の minibuffer などは、こうした制約を元に独自の活路を見出して発展して来たと思いますが、やはり機能不足ではあるようです。
+
+それでは次の記事でお会いしましょう！
+
+* Emacs 精進 08: 今日も Magit が無ければ即死だった
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-08.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 8 日目の投稿です。
+
+** 背景
+
+このシリーズでは、事前に決めたタイトルに沿って記事を書き、どんなに記事の内容がタイトルと乖離してもそのままとしています。
+
+このタイトルで何を書きたかったのか、もはや僕自身にも分からないのですが、 Magit について徒然と書いて一記事としたいと思います。
+
+** Magit ユーザとして
+
+*** 日常の Git 操作
+
+Magit に慣れるためには、日常的な Git 操作を =magit= にするのが良いと思います。公式ドキュメントはリファレンスであってチュートリアルではないため、手探りで使っていく他に無さそうです。
+
+=magit= 経由で Git を操作すると、本来あるべき Git の UI が明らかになります。たとえば =git push= は並列的に実行されるため、 push 完了まで待機する必要がありません。あるいは =cherry-pick= したければ、まず対象のブランチのログを表示し、 pick すべきコミットを選んでから =magit-cherry-pick= します。 Rebase 用のバッファから該当のコミットの内容を確認することができますし、 fixup コミットを平然と放つこともできます。
+
+一度理解すれば、高度な機能を手足のように扱うことができます。 Magit を使うだけで、半ば Git の達人となることができるのだ……！
+
+#+BEGIN_QUOTE
+=bisect= などは改善の余地があるかもしれません。
+#+END_QUOTE
+
+*** 巨大リポジトリに対して
+
+僕が Magit を最高だと思っているのは、所詮 Magit が軽快に動作する中小規模のリポジトリしか触っていないから、という面もあります。 [[https://github.com/NixOS/nixpkgs][=nixpkgs=]] 上で Magit を使うと、動作毎に 10 秒単位で遅延が発生するのは避けられません。 Linux Kernel のリポジトリでは遅過ぎる、という [[https://github.com/magit/magit/issues/2982][Issue]] もあります。ここは認めざるを得ないところではないかと。
+
+*** =smerge-mode=
+
+Conflict の解決のショートカットは Magit には無く、 =smerge-mode= を使います。
+
+あまり conflict の解決作業が無い場合、 =smerge-mode= のショートカットを忘れがちです。探せば誰かの [[https://github.com/abo-abo/hydra][hydra]] があるので、こういうのを採用しても良いと思います:
+
+#+BEGIN_EXPORT md
+https://github.com/kaushalmodi/.emacs.d/blob/2612774caabe9e84b6a2d45f017f97e7f07afcd0/setup-files/setup-diff.el#L181-L212
+#+END_EXPORT
+
+*** 3-way diff
+
+=ediff= が Magit の一番難しい所だと思います。僕は =ediff= を使っていません。 Side-by-side の diff も 3-way diff も苦手なためです。所詮大した活動をしていないためかもしれませんね 🥺
+
+*** =magit-blame=
+
+Magit blame は blame のインライン表示といった機能です。僕はこれが見づらくて、実のところ GitHub の blame を見ています。ブラウザからならば PR の内容にも飛べるので、残念ながら一部のリーダーとしての機能はテキストエディタに勝ると思います。
+
+VSCode のようにカーソル下に変更履歴を出したい場合は、 [[https://github.com/Artawower/blamer.el][=blamer.el=]] を使うことができます。
+
+*** Hunk の内容
+
+=magit-status= 中の diff に行番号が表示されないのは宿命だと思います。
+
+** まとめ
+
+Magit について管を巻いてみました。そんなにハードな Emacs ユーザではないことを自覚してしましました。難しい機能は使わなければ良いとしています。
+
+それでは次の記事でお会いしましょう！
 
