@@ -972,7 +972,7 @@ README に記載の Python パッケージおよび、必須の ELisp パッケ�
    (lsp-bridge-org-babel-lang-list . '("emacs-lisp" "haskell"))))
 #+END_SRC
 
-=yasnippet= を入れていないと、ほぼ操作不能になりました。間接依存として自動で入れてくれないんでしょうか。
+=yasnippet= を入れていないと、ほぼ操作不可能になりました。間接依存として自動で入れてくれないんでしょうか。
 
 =corfu= を始めとした補完パッケージは無効化するように、との注意書きがあるため、従います。
 
@@ -1132,7 +1132,7 @@ https://qiita.com/nobuyuki86/items/122e85b470b361ded0b4
 ![07-border-spacious-padding.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/af20ca08-f8ac-4c6b-8483-3228068a0b05.png)
 #+END_EXPORT
 
-しかし非常に強引な方法を用いており、線を描けるのは modeline に限られるようです。やはり *理想的な設定は不能* であることが分かりました。
+しかし非常に強引な方法を用いており、線を描けるのは modeline に限られるようです。やはり *理想的な設定は不可能* であることが分かりました。
 
 一応、 modeline に線を引くだけの設定はこちらです:
 
@@ -1238,4 +1238,802 @@ Qiita の規約上、全ての記事が Idea ではなく Tech であるべき�
 Magit について管を巻いてみましたが、そんなにハードな Emacs ユーザではないことを自覚してしましました。難しい機能は使わなければ良い、そんな弱者の戦略でやりくりしています。皆さんは Emacs や Magit を使いこなせていますか？
 
 それでは次の記事でお会いしましょう！
+
+* Emacs 精進 09: 最新の RMS の動向を追うには
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-09.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 9 日目の投稿です。
+
+** 背景
+
+今日も荷が重いタイトルが設定されています。申し訳ありません。
+
+[[https://lists.gnu.org/archive/html/emacs-devel/][emacs-devel]] のアーカイブを Emacs から読めれば OK ということにさせてください。
+
+** Emacs からメーリングリストを読むには
+
+メーリングリストとは何なのか、組み込みのリーダーが無いのか、どこかのサーバからデータを引っ張ってきて表示するだけではないのか。過去に語り尽くされたはずの情報であっても、今から読み取るのは意外と大変です……
+
+https://lists.gnu.org/archive/mbox/emacs-devel/2025-12
+
+* Emacs 精進 10: Windows 環境構築
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-10.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 10 日目の投稿です。
+
+** 背景
+
+macOS, Linux においては概ね問題無く Emacs を使用できますが、 Windows においてはどうでしょうか。環境構築およびトラブルシューティングを実施してみます。
+
+……が、特に何も起きなかったという記事になります 😇
+
+> WSL 版の環境構築はしません。
+
+** Windows 環境構築
+
+*** インストール
+
+[公式もバイナリを配布しています](https://www.gnu.org/software/emacs/download.html) が、ここは chocolatey から入れてみます:
+
+#+BEGIN_SRC sh
+% choco install emacs
+% # choco upgrade emacs
+#+END_SRC
+
+Windows においては =%APPDATA%= 直下に =.emacs.d= を置きます自分の設定を入れて Emacs を起動してみました (=C:\ProgramData\chocolatey\bin\runemacs.exe=)。
+
+初回起動で撮り忘れていたのですが、二度目の起動は次の通りとなりました:
+
+#+BEGIN_EXPORT md
+![emacs-1.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/7a38862b-e445-4a9a-843b-b9e328191c52.png)
+#+END_EXPORT
+
+以前は Windows 版の開発が危ぶまれていた気もしますが、全然サポートされていますね。ありがたい限りです。起動時間が macOS/Linux の 5 倍長いのですが、今回は置いておきます。
+
+[[https://github.com/rainstormstudio/nerd-icons.el][=nerd-icons.el=]] の README に沿ってアイコンをインストールしてみると:
+
+#+BEGIN_EXPORT md
+![emacs-2.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/47b98651-b9b7-41f6-8ded-b10767299657.png)
+#+END_EXPORT
+
+Code action の 💡 が表示していませんが、明らかに厄介な現象なので放っておきましょう……:
+
+#+BEGIN_EXPORT md
+https://github.com/seagle0128/doom-modeline/issues/692
+#+END_EXPORT
+
+*** Windows の場合で分岐する
+
+=(eq system-type 'windows-nt)= で Windows を判定できる模様です。今回は使いどころがありませんでした。
+
+** まとめ
+
+Windows で記念撮影しただけで終わってしまいました。これまでの記事で一番内容が薄いですね……。アイコンが表示しない問題があったものの、深掘りすると一週間かけても直せるか怪しいため、特に対処せず完了とします。
+
+それでは次の記事でお会いしましょう！
+
+* Emacs 精進 11: 悪の者です……
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-11.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 11 日目の投稿です。
+
+** 背景
+
+僕は [[https://github.com/emacs-evil/evil][Evil]] (Vim バインド) ユーザです。僕は Emacs ユーザであることを公言してますが、 evil ユーザであることは言及していないため、ガチガチの Emacsen だと認識されているかもしれません。この伏せ札を見せる日は来るのでしょうか。
+
+さて evil について、簡単に設定を振り返ってみます。完全な設定を作れずに運用でごまかしている面が強いです。
+
+** Evil の設定していない部分
+
+設定していない部分、できていない部分から書いてみます。
+
+*** Vim との互換性
+
+Evil で使えない機能として、 =cgn= などのキーバインドが有ります。僕がエセ Vim 使いであるために、このようなニッチな Vim の機能は存在にすら気づいていないので、特に設定していません。無念……。
+
+*** Emacs 内ターミナルとの相性
+
+Evil と Emacs 内ターミナルの相性は悪いです。普通に =tmux= を使うのが楽だと思います。僕は Emacs 自体もターミナルから起動しています。
+
+*** ターミナル内の制限
+
+**** キー入力
+
+Emacs をターミナル上で使用した場合、修飾キー + 記号キーなどの入力を正しく受け取ることができません。たとえば =Ctrl + ,= も認識できません。
+
+Vim バインドを使うと、装飾キーを使うことが少なく、ほぼこの問題を回避できます。しばしば =Ctrl + RET= 等が欲しくなりますが、新しいキーバインドを作ったり、 =org-mode= ファイルのみ GUI から編集するなどの方法で凌いでいます。
+
+**** Fringe, 画像表示
+
+GUI の Emacs では、細い線を描けてとても格好良いです。ターミナルだと、いつものブロックで構成された画面が退屈です。
+
+GUI の Emacs では自然に画像を表示できて、 =org-mode= でブログなどを書くと体験が良いです。ターミナルで =org-mode= を書くと、ブラウザとのプレビューを反復することになり、本来あるべきフロー (主観) から外れてしまいます。
+
+**** ポップアップ
+
+現在の Emacs では、ターミナルでポップアップウィンドウの機能 (_child frame_) を使用できません。これは次のメジャーリリースで解決するという噂があるので、非常に楽しみです。
+
+もっとも、補完等は謎機能でポップアップ表示するため、特に困ることはありません。 Emacs の主な選択画面 (minibuffer) がポップアップ表示 *ではない* のも面白いですね。
+
+** Evil の設定
+
+少しだけ設定した部分を書いてみます。
+
+*** Vim に近い挙動に修正
+
+Evil Emacs が Vim では無さ過ぎてやられてしまう人は多いです。僕のようなエセ Vimmer であっても、以下の点は気になって (不完全ながら) 修正してみました。
+
+**** 最下行カーソル
+
+デフォルトの Emacs は、通常のエディタよりも 1 行下までカーソルが移動します。この挙動を抑制するために、僕は強引な advice を書いています:
+
+#+BEGIN_SRC elisp
+(defun my/disable-cursor-at-eof ()
+  (unless (or (window-minibuffer-p) (<= (line-number-at-pos) 1))
+    (when (= (point) (point-max))
+      (forward-line -1))))
+(add-hook 'post-command-hook #'my/disable-cursor-at-eof)
+#+END_SRC
+
+Emacs 内ターミナル等でめちゃめちゃ干渉したらすみません。
+
+**** 起動時の画面分割
+
+複数のファイルを引数に Vim を起動すると、 1 つのウィンドウに最初のファイルが開きます。
+
+#+BEGIN_SRC sh
+$ vim a b c # a が開く
+#+END_SRC
+
+複数のファイルを引数に Emac を起動すると、最後のファイルと =*Buffer List*= が開きます:
+
+#+BEGIN_SRC sh
+$ emacs -Q a b c # c と *Buffer List* が開く
+#+END_SRC
+
+僕の場合は、起動時に =delete-other-windows= を呼ぶことで、 =c= 以外のウィンドウが閉じるようにしています:
+
+#+BEGIN_SRC elisp
+(add-hook 'window-setup-hook #'delete-other-windows)
+#+END_SRC
+
+ズバり Vim の動作ではないですが、意外に修正が難しかったので、これだけにしています……。
+
+**** =quit= 関連の挙動
+
+ウィンドウを閉じた際に、 Emacs を終了して欲しかったり、逆に終了してほしく無い場合もあります。この辺りは地道に修正し、動作を合わせます:
+
+#+BEGIN_SRC elisp
+(defun my/evil-quit ()
+  (interactive)
+  (cond ((one-window-p) (my/evil-quit-all))
+        (t (evil-quit))))
+
+(defun my/evil-save-and-quit()
+  (interactive)
+  (save-buffer)
+  (my/evil-quit))
+
+(defun my/evil-quit-all ()
+  (interactive)
+  (cond ((= 1 (length (funcall tab-bar-tabs-function))) (evil-quit-all))
+        (t (tab-bar-close-tab))))
+
+;; NOTE: this is not perfect, e.g., when we press `C-w q`
+(evil-ex-define-cmd "q[uit]" 'my/evil-quit)
+(evil-ex-define-cmd "wq" 'my/evil-save-and-quit)
+(evil-ex-define-cmd "qa[ll]" 'my/evil-quit-all)
+#+END_SRC
+
+もっとストレートな修正方法もあると思いますが、誤魔化しつつやってます。
+
+*** コマンドの作成
+
+=:ed<RET>= で =init.org= を開けるようにしています。この手の設定は簡単で良いですね:
+
+#+BEGIN_SRC elisp
+(evil-ex-define-cmd
+ "ed" (lambda nil
+        (interactive)
+        (evil-edit
+         (concat user-emacs-directory "init.org"))))
+#+END_SRC
+
+*** 日本語編集用
+
+誰かが Vim で =C-j= を =、= に、 =C-l= を =。= にする設定記事を書いていました。同じようなことができます:
+
+#+BEGIN_SRC elisp
+(keymap-set evil-read-key-map "C-j" "、")
+(keymap-set evil-read-key-map "C-l" "。")
+#+END_SRC
+
+この設定のおかげで、たとえば =f C-j= が =f、= になったりします。 =;= リピートもできます。日本語編集に必須です！
+
+** まとめ
+
+Evil やターミナル上の Emacs についての経験をつらつらと書いてみました。不完全な設定ばかりなので、デカデカと記事に書いたことは無かったと思いますが、この手の設定が効いて Vim から Evil Emacs に移行できたのを覚えています。酷い設定だったらすみません。。
+
+それでは次の記事でお合いしましょう！
+
+* Emacs 精進 12: Emacs で Qiita が読めるか
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-12.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 12 日目の投稿です。
+
+** 背景
+
+Emacs で Qiita が読めるか。読めないと思いますが、試しに =eww= で開いてみます:
+
+#+BEGIN_EXPORT md
+![11-eww-1.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/e5200caa-79e1-4baa-a724-9e74de330538.png)
+#+END_EXPORT
+
+思ったよりも読めますね……！　画像表示もできているのは驚きでした 。検索や記事の移動は諦めることにして、不要なテキスト部分を自動削除して快適に記事を読む方法を考えてみます。
+
+[[https://github.com/emacs-w3m/emacs-w3m][=emacs-w3m=]] においても =w3m-default-display-inline-images= を =t= にすると画像表示できました:
+
+#+BEGIN_EXPORT md
+![12-w3m.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/16a7f7b8-be7a-49b3-ad5a-4f6a613009fa.png)
+#+END_EXPORT
+
+……が、 high DPI の画像スケーリングの調整が大変そうなので、今回は =eww= を設定してみます。
+
+** =eww= のフィルタを設定したい
+
+=w3m= ([[https://github.com/emacs-w3m/emacs-w3m+][=emacs-w3m=]]) においては『フィルタ』を設定することで、余分な表示要素を除去できる模様です:
+
+#+BEGIN_EXPORT md
+http://mugijiru.seesaa.net/article/239805151.html
+#+END_EXPORT
+
+=eww= においては
+
+* Emacs 精進 14: top など監視関係
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-14.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 14 日目の投稿です。
+
+** 背景
+
+Emacs のダッシュボード系プラグインを試してみます。
+
+** プラグイン訪問
+
+*** =proced= (builtin)
+
+Process editor の略だったら格好いいですね。使ってみます:
+
+#+BEGIN_SRC elisp
+(leaf proced
+  :ensure nil
+  :custom
+  ((proced-auto-update-flag . t)
+   (proced-enable-color-flag . t)))
+#+END_SRC
+
+=top= に近い画面になりました:
+
+#+BEGIN_EXPORT md
+![14-proced.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/0a3d1797-b82f-46f4-8736-b5c11f5aff8d.png)
+#+END_EXPORT
+
+Evil ユーザの場合は [[https://github.com/emacs-evil/evil-collection/blob/cd6cdf337ea96abc742a97be61c817788f512413/modes/proced/evil-collection-proced.el][=evil-collection-proced.el=]] のバインドが使えます:
+
+#+BEGIN_EXPORT md
+![14-proced-evil.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/f5ce648c-1f9b-4eb4-95af-6f414f39ed89.png)
+#+END_EXPORT
+
+=consult= 等のサポートはありませんが、 [[https://github.com/travisjeffery/proced-narrow][=proced-narrow=]] によって動的な絞り込みができます:
+
+#+BEGIN_EXPORT md
+![14-proced-narrow.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/899be403-39d6-4b26-a019-87cc064c7382.png)
+#+END_EXPORT
+
+** まとめ
+
+カレンダー 25 記事は無理です。スカスカの記事になってしましました。他にも =metrics-tracker= など、様々なパッケージがありそうですが、 =proced= のみとさせてください。
+
+それでは次の記事でお合いしましょう！
+
+* Emacs 精進 15: SQL Contest 環境構築
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-15.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 15 日目の投稿です。
+
+** 背景
+
+TOPSIC SQL CONTEST の環境構築をするはずが、コンテストサイトが無くなっていました:
+
+#+BEGIN_EXPORT md
+https://topsic-contest.jp/
+#+END_EXPORT
+
+どうしましょうか……。
+
+** sqlite 環境構築
+
+軽く SQL の動作確認ができる程度を目指して環境構築します。 =INNER JOIN= と =OUTER JOIN= を比較できたら完了とします。
+
+*** =sql-sqlite= (SQL シェルの起動)
+
+Emacs から =sql-sqlite= で =test.db= を開きます (空ファイルで良いです) 。 =hello= テーブルを作ってみます:
+
+#+BEGIN_SRC sh
+$ sqlite3 test.db
+SQLite version 3.50.4 2025-07-30 19:33:53
+Enter ".help" for usage hints.
+sqlite> create table hello (msg TEXT);
+sqlite> insert into hello values ('hello');
+#+END_SRC
+
+普通の SQL シェルですね。テーブル定義を確認してみます:
+
+#+BEGIN_SRC sql
+sqlite> .table
+hello
+sqlite> .schema hello
+CREATE TABLE hello (msg TEXT);
+sqlite> select * from hello;
+hello
+#+END_SRC
+
+*** =org-mode= ファイルからの SQL 実行
+
+せっかく Emacs を使っているならば、 one-shot なコマンドは =org-mode= から打っても良いかもしれません。 =(require 'ob-sqlite)= 後、以下のように実行 (=org-babel-execute-src-block=) できます:
+
+#+BEGIN_EXPORT md
+https://orgmode.org/worg/org-contrib/babel/languages/ob-doc-sqlite.html
+#+END_EXPORT
+
+#+BEGIN_SRC org
+,#+BEGIN_SRC sqlite :db ./test.db
+.table
+,#+END_SRC
+
+,#+RESULTS:
+: hello
+#+END_SRC
+
+#+BEGIN_SRC org
+,#+BEGIN_SRC sqlite :db ./test.db
+.schema hello
+,#+END_SRC
+
+,#+RESULTS:
+: CREATE TABLE hello (msg TEXT);
+#+END_SRC
+
+もしもすべてのコードブロックに =:db= を書くのが大変ならば、ファイル冒頭で =header-args= を指定すれば良いです:
+
+#+BEGIN_SRC org
+#+PROPERTY: header-args :db ./test.db
+
+,#+BEGIN_SRC sqlite
+.table
+,#+END_SRC
+
+,#+RESULTS:
+: hello
+#+END_SRC
+
+*** =sqlite-mode=
+
+=sqlite-mode-open-file= で =test.db= を開くと、次のような =*SQLite test.db*= バッファが開き、テーブルの一覧を表示します:
+
+#+BEGIN_SRC txt
+Table Name  Number of Rows  
+hello                     1 
+#+END_SRC
+
+=hello= の上で =RET= を押すと、次のようにテーブルの内容が表示します:
+
+#+BEGIN_SRC txt
+Table Name  Number of Rows  
+hello                     1 
+  rowid  msg            
+       1 Hello, world!  
+#+END_SRC
+
+その他のバインドは、 =sqlite-mode-map= や周辺のコードをご参照ください:
+
+#+BEGIN_EXPORT md
+https://github.com/emacs-mirror/emacs/blob/9b4c2adf73a9686f609b1c5d51a1ad6021736a0d/lisp/sqlite-mode.el#L38-L42
+#+END_EXPORT
+
+#+BEGIN_QUOTE
+この画面からテーブルを編集するなら、 [[https://github.com/xenodium/sqlite-mode-extras][=sqlite-mode-extras=]] も必要だと思います。
+#+END_QUOTE
+
+*** Demo
+
+Join の (不完全な) デモを =org-omde= でお送りします。
+
+#+BEGIN_SRC org
+,#+BEGIN_SRC sqlite
+create table hello_a (msg TEXT, a INTEGER);
+,#+END_SRC
+
+,#+RESULTS:
+#+END_SRC
+
+#+BEGIN_SRC org
+,#+BEGIN_SRC sqlite
+.table
+,#+END_SRC
+
+,#+RESULTS:
+: hello    hello_a
+#+END_SRC
+
+#+BEGIN_SRC txt
+,#+BEGIN_SRC sqlite
+insert into hello_a (msg, a) VALUES ('hello', 42);
+,#+END_SRC
+
+,#+RESULTS:
+#+END_SRC
+
+#+BEGIN_SRC txt
+,#+BEGIN_SRC sqlite
+select * from hello;
+select * from hello_a;
+,#+END_SRC
+
+,#+RESULTS:
+| hello |    |
+| hello | 42 |
+#+END_SRC
+
+Inner join:
+
+#+BEGIN_SRC txt
+,#+BEGIN_SRC sqlite
+SELECT * FROM hello
+INNER JOIN hello_a
+ON hello_a.msg == hello.msg;
+,#+END_SRC
+
+,#+RESULTS:
+| hello | hello | 42 |
+#+END_SRC
+
+Left outer join:
+
+#+BEGIN_SRC txt
+,#+BEGIN_SRC sqlite
+SELECT * FROM hello
+LEFT JOIN hello_a
+ON hello_a.msg = hello.msg;
+,#+END_SRC
+
+,#+RESULTS:
+| hello | hello | 42 |
+#+END_SRC
+
+** まとめ
+
+=sql-sqlite=, =org-babel=, =sqlite-mode= を見てきました。 =org-mode= から SQL クエリを発行できるのは良かったですね。
+
+Emacs からもリッチな DB 操作ができる……というよりは、 *大したことができそうにない* というのが触ってみた感想です。とはいえ小回りの効く環境が手に入るので、 Emacs から DB に入門するのは結構筋が良いのではないでしょうか。僕も DB はエアプもいいとこなので、 Emacs 上で軽快に DB 操作する記事があれば、ぜひ読んでみたいです。
+
+それでは次の記事でお会いしましょう！
+
+* Emacs 精進 16: ネタ切れの場合
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-16.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 16 日目の投稿です。
+
+** 背景
+
+先月の僕は、このタイトルで何を書かせたかったのでしょうか。実質フリースタイルで行きます。
+
+** 検索中……
+
+良い感じのパッケージをランダムに 10 点弱記載します。コミュニティで教えてもらったパッケージが多く、以前の記事とも被るので、今さらという感じですが……。
+
+*** ユーティリティ
+
+**** [[https://github.com/conao3/leaf.el][=leaf.el=]]
+
+=use-package= を置き換えると、なぜか起動が速くなる神パッケージです。ぜひ！
+
+**** [[https://github.com/minad/tempel][Tempel]]
+
+Minadware のテンプレート展開ツールです。軽量なテンプレートファイルで設定できるのが気に入っていますが、 yasnippet でもいいかも。
+
+*** 見た目
+
+**** [[https://github.com/rainstormstudio/nerd-icons.el][=nerd-icons.el=]]
+
+=nerd-icons.el= はターミナルでもアイコン表示ができる最高のパッケージです:
+
+#+BEGIN_SRC elisp
+(leaf nerd-icons
+  :leaf-defer nil
+  :config
+  (leaf nerd-icons-completion
+    :hook (marginalia-mode-hook . nerd-icons-completion-marginalia-setup)
+    :config
+    (nerd-icons-completion-mode))
+  (leaf nerd-icons-dired
+    :custom
+    ;; dired は単バッファ運用だと便利だと思います
+    (dired-kill-when-opening-new-dired-buffer . t)
+    :hook
+    (dired-mode-hook . nerd-icons-dired-mode))
+  (leaf nerd-icons-corfu
+    :after corfu
+    :config
+    (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter)))
+#+END_SRC
+
+**** [[https://github.com/protesilaos/spacious-padding][=spacious-padding=]]
+
+Padding 無しでも鮮やかな線が modeline に引かれて格好いいです (GUI 限定):
+
+#+BEGIN_SRC elisp
+(leaf spacious-padding
+  :config
+  (setq spacious-padding-widths
+        '( :internal-border-width 0
+           :header-line-width 0
+           :mode-line-width 0
+           :tab-width 0
+           :right-divider-width 0
+           :scroll-bar-width 0))
+
+  (setq spacious-padding-subtle-frame-lines
+        '( :mode-line-active spacious-padding-line-active
+           :mode-line-inactive spacious-padding-line-inactive
+           :header-line-active spacious-padding-line-active
+           :header-line-inactive spacious-padding-line-inactive))
+
+  (spacious-padding-mode +1))
+#+END_SRC
+
+**** [[https://github.com/tarsius/minions][=minions=]]
+
+Modeline から大量のマイナーモードを隠してくれるパッケージです。これ無しだと =doom-modeline= がゴチャゴチャになります:
+
+#+BEGIN_SRC elisp
+(leaf minions
+  :custom ((minions-mode-line-lighter . "[+]")
+           (doom-modeline-minor-modes . t))
+  :config
+  (minions-mode 1))
+#+END_SRC
+
+*** =org-mode= 関連のパッケージ
+
+**** [[https://github.com/awth13/org-appear][=org-appear=]]
+
+例えば ~=a=~ を ~a~ として表示しつつ、カーソルがあった時には ~=a=~ に戻すというパッケージです。リンク等にも適用可能です:
+
+#+BEGIN_SRC elisp
+(leaf org-appear
+  :doc "Uninline format on cursor"
+  :hook (org-mode-hook . org-appear-mode)
+  :custom
+  (org-appear-autolinks . t)
+  (org-appear-inside-latex . t)
+  (org-hide-emphasis-markers . t))
+#+END_SRC
+
+**** [[https://github.com/io12/org-fragtog][=org-fragtog=]]
+
+=org-latex-preview= と共に有効化すると、数式が =org-appear= になります:
+
+#+BEGIN_SRC elisp
+(leaf org-fragtog
+  :hook ((org-mode-hook . org-fragtog-mode)
+         (org-mode-hook . org-latex-preview)))
+#+END_SRC
+
+**** [[https://github.com/yibie/org-include-inline][=org-include-inline=]]
+
+これは前 2 点とは別系統のパッケージですが、 =#+INCLUDE= の内容をバッファ内に表示してくれます:
+
+#+BEGIN_SRC elisp
+(leaf org-include-inline
+  :ensure nil
+  :after org
+  :vc (:url "https://github.com/yibie/org-include-inline")
+  :hook (org-mode-hook . org-include-inline-mode))
+#+END_SRC
+
+** まとめ
+
+Minadware や Magit, Evil を必須装備として、それ以外の日々ありがたみを噛み締めているパッケージを紹介しました。こうした外部パッケージ以外にも、 builtin パッケージにいぶし銀なやつがいたりしますよね。
+
+それでは次の記事でお会いしましょう！
+
+* Emacs 精進 17: パワーユーザーフレンドリー！
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-17.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 17 日目の投稿です。
+
+** 背景
+
+先日の僕が決めたタイトルですが、ネタが思いつかなかったので適当言ってますね。
+
+過去に設定を頑張っていた時期があるので、そのイメージで言っていたと思います:
+
+#+BEGIN_EXPORT md
+https://zenn.dev/toyboot4e/scraps/5ebf97eb23b039
+#+END_EXPORT
+
+大した Emasc 技術力が無くても無限に遊べるということですね……ひらめいた！
+
+** ブログ生成について
+
+[[https://toyboot4e.github.io/][僕のブログ]] は Emacs がビルドしています。これの終わっているビルドスクリプトや、ブログの機能を改めて紹介しようと思います。焼き直しということですが……。
+
+#+BEGIN_EXPORT md
+https://github.com/toyboot4e/toyboot4e.github.io/blob/main/build.el
+#+END_EXPORT
+
+*** =index.org=
+
+僕のブログのトップ画面は、色々頑張っています:
+
+#+BEGIN_EXPORT md
+![17-top.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/b4416efa-0e3b-4165-b985-a26df4af1e19.png)
+#+END_EXPORT
+
+#+BEGIN_EXPORT md
+- `<header>`, `<body>`, `<footer>` タグに分かれています。
+  → [`esxml`](https://github.com/tali713/esxml) でゴリゴリ html を作っています
+- 見出しが (タグ一覧、開発記事一覧、日記) の 3 つに分かれています。
+  → ELisp でゴリゴリ `index.org` を生成しています。
+- タグ一覧があります。
+  → ELisp でゴリゴリ `#+FILETAGS` を収集しています。
+#+END_EXPORT
+
+このページに対応する =index.org= ファイルは、次の通りです:
+
+#+BEGIN_SRC org
+,#+TITLE: Toybeam
+
+,* Tags
+
+@@html:<a href="/tags/atcoder.html" class="org-tag"><code>#atcoder</code></a>@@ @@html:<a href="/tags/blender.html" class="org-tag"><code>#blender</code></a>@@ @@html:<a href="/tags/blog.html" class="org-tag"><code>#blog</code></a>@@..
+
+,* Devlog (timeline)
+#+ATTR_HTML: :class sitemap
+- @@html:<date>2025-12-20</date>@@ [[file:/2025-12-20-toc.org][=org-mode= 製ブログの改良 (6): Tocbot]] @@html:<a href="/tags/blog.html" class="org-tag"><code>#blog</code></a>@@
+- ..
+
+,* Diary
+,#+ATTR_HTML: :class sitemap
+- @@html:<date>2025-11-16</date>@@ [[file:/diary/2025-11-16.org][ABC 432]]
+- ..
+#+END_SRC
+
+この =index.org= は、記事ファイルの一覧を収集し、自動生成しています。
+
+*** Prism.js
+
+コードブロックが [[https://prismjs.com/][Prism.js]] に対応しており、 diff も表示できます:
+
+#+BEGIN_EXPORT md
+![17-prism.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/7422ff48-7b56-4aa0-a7af-12263f531597.png)
+#+END_EXPORT
+
+*** Callouts (coderef)
+
+=org-mode= には [[https://orgmode.org/worg/org-syntax.html#org2ccb695][coderef]] という構文により、アンカーを置いたソース箇所を参照する機能があります。これの html 出行をハイジャックして、一昔前の Asciidoctor の [[https://docs.asciidoctor.org/asciidoc/latest/verbatim/callouts/][callouts]] を再現しています:
+
+#+BEGIN_EXPORT md
+![17-coderef.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/11f87f7e-8f15-4e95-aea2-5c1e1c5b8804.png)
+#+END_EXPORT
+
+*** やる夫
+
+org-mode の special block として、やる夫を実装しています:
+
+#+BEGIN_EXPORT md
+![17-yaruo.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/080564a2-7030-4b15-99ee-e81411db9bc6.png)
+#+END_EXPORT
+
+フォントは [[https://fonts.aahub.org/font/2][aahub\under{}light]] をお借りしました。ありがとうございます。
+
+*** Tocbot
+
+横の見出しは [[https://tscanlin.github.io/tocbot/][Tocbot]] で出しているので、 Emacs はほぼ関係ありません:
+
+#+BEGIN_EXPORT md
+<img width="25%" src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/14ec2a0c-d15c-4393-8d0d-343b44093a4a.png">
+#+END_EXPORT
+
+*** CI
+
+GitHub Actions でデプロイします。無駄に Nix でビルドしています。
+
+ここだけ技術的な説明を加えれば、 Qiita の規約もクリアできるのではないでしょうか。
+
+僕の萎びた [[https://github.com/toyboot4e/toyboot4e.github.io/blob/main/flake.nix][=flake.nix=]] から抜粋すると、以下がブログのビルド箇所です。ほぼ =./build.el= を叩いているだけですね:
+
+#+BEGIN_SRC nix
+  buildCommand = pkgs.writeShellApplication {
+    name = "build-command";
+    runtimeInputs = with pkgs; [
+      (emacs.pkgs.withPackages (
+        epkgs: with epkgs; [
+          seq
+          esxml
+        ]
+      ))
+      nodePackages.prettier
+    ];
+    text = ''
+      emacs -Q --script "./build.el" -- "--release"
+      prettier --print-width 100 --write out/*.html out/diary/*.html
+    '';
+  };
+#+END_SRC
+
+この =buildCommand= を元に、 =nix build .#devlog= を定義します:
+
+#+BEGIN_SRC nix
+  packages = {
+    devlog = pkgs.stdenvNoCC.mkDerivation {
+      name = "devlog";
+      src = ./.;
+      nativeBuildInputs = [
+        buildCommand
+      ];
+      buildPhase = ''
+        export HOME="$(mktemp -d)"
+        build-command
+      '';
+      installPhase = ''
+        mkdir -p "$out"
+        mv out "$out/out"
+      '';
+    };
+  };
+#+END_SRC
+
+#+BEGIN_QUOTE
+=nativeBuildInputs= ではなく =buildInputs= で良さそうです……
+#+END_QUOTE
+
+GitHub 上では、以下のように =nix build= を呼ぶだけです:
+
+#+BEGIN_SRC yaml
+name: "Build"
+description: Set up Nix environment for GitHub Actions
+
+runs:
+  using: composite
+  steps:
+    - uses: cachix/install-nix-action@v31
+    - name: Build the devlog
+      shell: "bash"
+      run: |
+        nix build .#devlog
+#+END_SRC
+
+** まとめ
+
+僕のブログ生成について、 2025 年時点の視点で一挙に紹介しました。幸い Emacs の org-export backend が異常に柔軟なおかげで、まだまだ僕のブログ生成には可能性がありますし、改善の余地もあります……。
+
+それでは、次の記事でお会いしましょう！
 

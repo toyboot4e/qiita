@@ -1,0 +1,79 @@
+#+TITLE DB test
+#+PROPERTY: header-args :db ./test.db
+
+(require 'ob-sqlite)
+
+#+BEGIN_SRC sqlite
+create table hello (msg TEXT);
+insert into hello (msg) values ('hello');
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC sqlite
+.table
+#+END_SRC
+
+#+RESULTS:
+: hello
+
+#+BEGIN_SRC sqlite
+.schema hello
+#+END_SRC
+
+#+RESULTS:
+: CREATE TABLE hello (msg TEXT);
+
+
+* Demo
+
+#+BEGIN_SRC sqlite
+create table hello_a (msg TEXT, a INTEGER);
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC sqlite
+.table
+#+END_SRC
+
+#+RESULTS:
+: hello    hello_a
+
+#+BEGIN_SRC sqlite
+insert into hello_a (msg, a) VALUES ('hello', 42);
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC sqlite
+select * from hello;
+select * from hello_a;
+#+END_SRC
+
+#+RESULTS:
+| hello |    |
+| hello | 42 |
+
+Inner join:
+
+#+BEGIN_SRC sqlite
+SELECT * FROM hello
+INNER JOIN hello_a
+ON hello_a.msg == hello.msg;
+#+END_SRC
+
+#+RESULTS:
+| hello | hello | 42 |
+
+Left outer join:
+
+#+BEGIN_SRC sqlite
+SELECT * FROM hello
+LEFT JOIN hello_a
+ON hello_a.msg = hello.msg;
+#+END_SRC
+
+#+RESULTS:
+| hello | hello | 42 |
+
