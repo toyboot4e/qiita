@@ -1681,6 +1681,7 @@ create table hello_a (msg TEXT, a INTEGER);
 #+BEGIN_SRC txt
 ,#+BEGIN_SRC sqlite
 insert into hello_a (msg, a) VALUES ('hello', 42);
+insert into hello_a (msg, a) VALUES ('hello_world', 43);
 ,#+END_SRC
 
 ,#+RESULTS:
@@ -1693,8 +1694,9 @@ select * from hello_a;
 ,#+END_SRC
 
 ,#+RESULTS:
-| hello |    |
-| hello | 42 |
+| hello       |    |
+| hello       | 42 |
+| hello_world | 43 |
 #+END_SRC
 
 Inner join:
@@ -1710,17 +1712,18 @@ ON hello_a.msg == hello.msg;
 | hello | hello | 42 |
 #+END_SRC
 
-Left outer join:
+Right outer join:
 
 #+BEGIN_SRC txt
 ,#+BEGIN_SRC sqlite
 SELECT * FROM hello
-LEFT JOIN hello_a
+RIGHT JOIN hello_a
 ON hello_a.msg = hello.msg;
 ,#+END_SRC
 
 ,#+RESULTS:
-| hello | hello | 42 |
+| hello | hello       | 42 |
+|       | hello_world | 43 |
 #+END_SRC
 
 ** まとめ
