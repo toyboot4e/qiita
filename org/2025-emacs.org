@@ -2040,3 +2040,70 @@ runs:
 
 それでは、次の記事でお会いしましょう！
 
+* Emacs 精進 18: 今日だけ SKK
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-18.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 18 日目の投稿です。
+
+** 背景
+
+日本語変換のソリッドなソリューションとして、一部で SKK が重宝されています (いました) 。 SKK は簡素な IME であり、文節の区切りをユーザが都度手動で指定するスタイルが特徴的です。
+
+** SKK 入門への入門
+
+SKK を習得するには [[https://ddskk.readthedocs.io/ja/latest/index.html][ddskk]] のチュートリアルをやれば良いですが、 120 点もの綿密なチュートリアルであるのが難点です。『どこまで進めたか忘れた』『過去のレッスンを振り返りたい』などの心の声が寄せられています。
+
+クリアフラグとレッスン一覧の表示機能が必要ではないかと思います。
+
+*** =consult-ddskk-tutorial=
+
+まずレッスンを =consult= から選択可能にする必要があります。
+
+** まとめ
+
+* Emacs 精進 19: 焼肉と Emacs
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-19.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 19 日目の投稿です。
+
+** 背景
+
+焼肉と Emacs の関連した記憶が……ございません 😇
+
+フリーテーマということで、焼肉 x Emacs ではなく GitHub x Emacs, 特に PR のレビューを Emacs から実施できるかを見てみます。
+
+** GitHub x Emacs
+
+*** Pending review の数を modeline に表示する
+
+[[https://github.com/pulls/review-requested][Review requested]] な PR を放置してしまったことがあります。 VSCode の codelens にレビューを要求された PR の数を表示する機能があると伺ったので、同じ機能を Emacs で再現してみます。
+
+まず [[https://cli.github.com/][gh]] でレビューの数を取得できます:
+
+#+BEGIN_SRC sh
+$ # review requested な PR を列挙する
+$ gh pr list --search "review-requested:@me"
+
+$ # review requested な PR 番号を列挙する
+$ gh pr list --search "review-requested:@me" --json number
+
+$ # review requested な PR の数を数える
+$ gh pr list --search "review-requested:@me" --json number --jq length
+#+END_SRC
+
+#+BEGIN_QUOTE
+[[https://github.com/sigma/gh.el][=gh.el=]] を使っても良いですが、他に用途が無いならば
+#+END_QUOTE
+
+*** =consult-gh=
+
+*** [[=https://github.com/blahgeek/emacs-pr-review][=emacs-pr-review=]]
+
+*** =forge=
+
+** まとめ
+
