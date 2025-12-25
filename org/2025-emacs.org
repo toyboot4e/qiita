@@ -2049,19 +2049,181 @@ runs:
 
 ** 背景
 
-日本語変換のソリッドなソリューションとして、一部で SKK が重宝されています (いました) 。 SKK は簡素な IME であり、文節の区切りをユーザが都度手動で指定するスタイルが特徴的です。
+日本語変換のソリッドなソリューションとして、一部で SKK が重宝されています (いました) 。 SKK は簡素な IME であり、文節の区切りをユーザが都度手動で指定して変換するスタイルが特徴的です。
+
+『Emacsen なのに SKK を使っていないなんてありえない！』と煽られたり、 Vim を OS の SKK にしている連中が跋扈していたり、 SKK 世紀末な現代ですので、僕も今日だけ SKK を覗き見てみます。
 
 ** SKK 入門への入門
 
-SKK を習得するには [[https://ddskk.readthedocs.io/ja/latest/index.html][ddskk]] のチュートリアルをやれば良いですが、 120 点もの綿密なチュートリアルであるのが難点です。『どこまで進めたか忘れた』『過去のレッスンを振り返りたい』などの心の声が寄せられています。
+SKK を習得するには =skk-tutorial= をやれば良いですが、 37 点もの綿密なチュートリアルであるのが難点です。『どこまで進めたか忘れた』『過去のレッスンを振り返りたい』など、数々の僕から心の声が寄せられています。
 
-クリアフラグとレッスン一覧の表示機能が必要ではないかと思います。
+クリアフラグと、少なくともレッスン一覧の表示機能が必要ではないかと思います。
 
-*** =consult-ddskk-tutorial=
+*** セットアップ (NixOS)
 
-まずレッスンを =consult= から選択可能にする必要があります。
+NixOS 上の [[https://ddskk.readthedocs.io/ja/latest/index.html][ddskk]] セットアップをローテクで実施します。 Nix の意味が全く無いです。
+
+まず辞書データは =init.el= の隣に解凍しておきます:
+
+#+BEGIN_SRC sh
+$ curl -L 'https://skk-dev.github.io/dict/SKK-JISYO.L.gz'
+$ gunzip SKK-JISYO.L.gz
+#+END_SRC
+
+またチュートリアルファイルが欲しいので、 =ddskk= のリポジトリを =init.el= の隣に解凍してしまいます:
+
+#+BEGIN_SRC nix
+$ git clone git@github.com:skk-dev/ddskk
+#+END_SRC
+
+最悪のセットアップでしたね……。後は普通に =ddskk= の設定を書きます:
+
+#+BEGIN_SRC elisp
+(leaf ddskk
+  :bind
+  (("C-x C-j" . skk-mode)
+   ("C-x j" . skk-auto-fill-mode)
+   ("C-x t" . skk-tutorial))
+  :init
+  (setq skk-large-jisyo (concat user-emacs-directory "SKK-JISYO.L"))
+  (setq skk-tut-file (concat user-emacs-directory "ddskk/etc/SKK.tut")))
+#+END_SRC
+
+これで =skk-tutorial= を起動できます:
+
+#+BEGIN_EXPORT md
+![18-skk-tutorial.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/ce11898d-5f92-4140-970a-a6823f14531b.png)
+#+END_EXPORT
+
+えらい疲れました。NixOS 上で =skk-tutorial= を一発で動かす方法を募集しています。
+
+*** =skktut-get-question-page=
+
+=skk-tutorial= は全部で 37 問ありますが、後戻りを考慮しない設計のようです:
+
+#+BEGIN_EXPORT md
+![18-skktut.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/bd8b95ea-3d41-42e3-91a7-213d9e652c41.png)
+#+END_EXPORT
+
+実際に取り組むと、 37 問は一日で終わらない割に、前の問題までの操作方法を忘れると詰むなどの問題があります。中断後、再開させる風でもなく、皆さんはこのチュートリアルは余裕でしたか……？
+
+=describe-funtion= で検索すると、指定ページに飛べる =skktut-get-question-page= が見つかります:
+
+#+BEGIN_SRC sh
+skktut-get-question-page
+#+END_SRC
+
+これは =interactive= にしておいて欲しかったですね。それと前の問題へ戻る =skktut-prev-question= もほしいです。
+
+*** =skktut-prev-question=
+
+これが一発で定義できました:
+
+#+BEGIN_SRC elisp
+(defun skktut-prev-question ()
+  (interactive)
+  (skktut-skip-question -1))
+#+END_SRC
+
+ここまで行き届いた実装になっていながら、なぜエンドユーザに届けられていないのか……？　否！　きっとパワーユーザには届いているのです。
+
+=C-x p= バインドを定義します。パッケージが古いためか、 =skktut-mode-map= というのはありません。
+
+一応、以下の設定が動きます:
+
+#+BEGIN_SRC elisp
+(require 'ddskk-autoloads)
+
+(defadvice skk-tutorial (after add-prev-key-binding activate)
+  (keymap-local-set "C-x p" #'skktut-prev-question))
+#+END_SRC
+
+*** =consult-skk-tutorial=
+
+最後に問題を =consult= から選択可能にします。
+
+#+BEGIN_SRC elisp
+(defun consult-skk-tutorial ()
+  "Select and jump to a specific SKK tutorial problem using consult."
+  (interactive)
+  (require 'consult)
+  (let ((tut-file (skk-tut-find-tut-file skk-tut-file))
+        (problems nil))
+    (unless (file-exists-p tut-file)
+      (error "Tutorial file not found: %s" tut-file))
+
+    ;; Set problems
+    (with-temp-buffer
+      (insert-file-contents tut-file)
+      (goto-char (point-min))
+      (let ((problem-num 0))
+        (while (re-search-forward "^----$" nil t)
+          (setq problem-num (1+ problem-num))
+          (next-line)
+          (while (looking-at-p "\\s-*;;")
+            ;; Ignore ;; lines
+            (forward-line 1))
+          (let ((title (buffer-substring (line-beginning-position) (line-end-position))))
+            (push `(,problem-num ,(format "%d %s" problem-num title))
+                  problems)))))
+
+    (pop problems) ;; discard the last one
+    (setq problems (reverse problems))
+
+    ;; consult
+    (when problems
+      (let* ((candidates (mapcar #'cdr problems))
+             (selection (consult--read
+                         candidates
+                         :prompt "SKK Tutorial Problem: "
+                         :require-match t
+                         :category 'consult-skk-tutorial
+                         :sort nil)))
+        (let ((entry (cl-find selection problems
+                              :key #'cadr
+                              :test #'string=)))
+          (when entry
+            (skktut-get-question-page (car entry))))))))
+#+END_SRC
+
+#+BEGIN_EXPORT md
+![18-skk-consult.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/66e4324e-7405-4c0c-8f04-92eb688b22e0.png)
+#+END_EXPORT
+
+最終的な =ddskk= の設定は以下の通りです:
+
+#+BEGIN_SRC elisp
+(leaf ddskk
+  :bind
+  (("C-x C-j" . skk-mode)
+   ("C-x j" . skk-auto-fill-mode)
+   ("C-x t" . skk-tutorial))
+
+  :init
+  (setq skk-large-jisyo (concat user-emacs-directory "SKK-JISYO.L"))
+  (setq skk-tut-file (concat user-emacs-directory "ddskk/etc/SKK.tut"))
+
+  (defun skktut-prev-question ()
+    (interactive)
+    (skktut-skip-question -1))
+
+  (defadvice skk-tutorial (after add-prev-key-binding activate)
+    (keymap-set (current-local-map) "C-x p" #'skktut-prev-question)
+    (keymap-set (current-local-map) "C-x <RET>" #'consult-skk-tutorial))
+
+  :config
+  (require 'ddskk-autoloads))
+#+END_SRC
 
 ** まとめ
+
+FHS-incompatible な NixOS 上で、 =ddskk= の =skk-tutorial= を起動しました (やたら苦労しました) 。また =skk-tutorial= を便利にしてみました。歴史あるパッケージだけあって、 keymap が定義されていないなど、改善の余地を感じました。
+
+みなさんは =skk-tutorial= に苦労しなかったのでしょうか……？　『良かった』みたいな感想しか無くて、誰も詰まっているように見えないのが謎です。
+
+……さてやっと SKK (skk tutorial) の記事を書くことができました。そこそこちゃんとした内容になったと思いますが、今日中にあと 11 記事を投稿するのは絶望的です。
+
+それでは、次の記事でお会いしましょう！
 
 * Emacs 精進 19: 焼肉と Emacs
 :PROPERTIES:
@@ -2074,7 +2236,7 @@ SKK を習得するには [[https://ddskk.readthedocs.io/ja/latest/index.html][d
 
 焼肉と Emacs の関連した記憶が……ございません 😇
 
-フリーテーマということで、焼肉 x Emacs ではなく GitHub x Emacs, 特に PR のレビューを Emacs から実施できるかを見てみます。
+フリーテーマということで、焼肉 x Emacs ではなく GitHub x Emacs について、時間の許す限り考えてみます。
 
 ** GitHub x Emacs
 
@@ -2090,20 +2252,595 @@ $ gh pr list --search "review-requested:@me"
 
 $ # review requested な PR 番号を列挙する
 $ gh pr list --search "review-requested:@me" --json number
-
 $ # review requested な PR の数を数える
 $ gh pr list --search "review-requested:@me" --json number --jq length
 #+END_SRC
 
+これを [[https://github.com/seagle0128/doom-modeline][=doom-modeline=]] に表示してみます。
+
+以下、実装案です。 =org-mode= においてのみ、レビューが必要な PR 数を表示し、 1 分毎に更新します:
+
+#+BEGIN_SRC elisp
+(defvar my/pr-count 0)
+(defvar my/pr-count-pr-timer nil)
+
+(with-eval-after-load 'doom-modeline
+  ;; Function to fetch PR count asynchronously (generated by AI)
+  (defun my/pr-count-fetch-pr-count ()
+    "Fetch GitHub PR count asynchronously."
+    (let* ((buf (get-buffer-create " *gh-pr-count*"))
+           (proc (start-process "gh-pr-count" buf
+                                "gh" "pr" "list"
+                                "--search" "review-requested:@me"
+                                "--json" "number" "--jq" "length")))
+      (set-process-sentinel
+       proc
+       (lambda (_proc _event)
+         (when (eq (process-status proc) 'exit)
+           (with-current-buffer buf
+             (let ((count (string-to-number
+                           (string-trim (buffer-string)))))
+               (setq my/pr-count count)
+               (force-mode-line-update))))))))
+
+  (defun my/pr-count-start-timer ()
+    "Start/Stop the timer for GitHub PR count fetching."
+    (when (timerp my/pr-count-pr-timer)
+      (cancel-timer my/pr-count-pr-timer))
+    (setq my/pr-count-pr-timer
+          ;; updated every miniute
+          (run-with-timer 0 60 #'my/pr-count-fetch-pr-count)))
+
+  (my/pr-count-start-timer)
+
+  (doom-modeline-def-segment github-pr-count
+    "Display count of PRs requesting your review."
+    (when (> my/pr-count 0)
+      (concat (number-to-string my/pr-count))))
+
+  ;; The 'main line with github-pr-count at the beginning
+  (doom-modeline-def-modeline 'my-line
+    '(github-pr-count eldoc bar window-state workspace-name window-number modals matches follow buffer-info remote-host buffer-position word-count parrot selection-info)
+    '(compilation objed-state misc-info project-name persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process vcs check time))
+
+  ;; Set default mode-line
+  (add-hook 'doom-modeline-mode-hook
+            (lambda () (doom-modeline-set-modeline 'my-line 'default)))
+
+  ;; TODO: set target other modes than org-mode, too
+  (add-to-list 'doom-modeline-mode-alist '(org-mode . my-line)))
+#+END_SRC
+
+実際、以下のように左下にレビューが必要な PR 数が表示しました:
+
+#+BEGIN_EXPORT md
+![19-count.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/23d377f0-ab0f-4604-bb0f-2889e34232f4.png)
+#+END_EXPORT
+
 #+BEGIN_QUOTE
-[[https://github.com/sigma/gh.el][=gh.el=]] を使っても良いですが、他に用途が無いならば
+=42= はダミーです。
 #+END_QUOTE
 
-*** =consult-gh=
+*** その他の可能性
 
-*** [[=https://github.com/blahgeek/emacs-pr-review][=emacs-pr-review=]]
-
-*** =forge=
+- [[https://github.com/armindarvish/consult-gh][=consult-gh=]]
+- [[https://github.com/blahgeek/emacs-pr-review][=emacs-pr-review=]]
+- [[https://github.com/magit/forge][=forge=]]
 
 ** まとめ
+
+Modeline にレビューが必要な PR 数を出す (人の) アイデア、かろうじて動くもののパッとしない実装を確認しました。
+
+それでは、次の記事でお会いしましょう！
+
+* Emacs 精進 20: Zed だったってことになりませんか
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-20.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 20 日目の投稿です。
+
+** 背景
+
+Neovim, Kakoune, Helix, .., 今は [[https://zed.dev/][Zed]] 。新興のエディタを使う人たちは、いつもイケていました。一方で我々が使うのは Emacs です。絶望的な初期設定画面にさえ何も感じなくなって来ましたし、本気でダサいとは思わなくなって来たかもしれません。
+
+#+BEGIN_EXPORT md
+![Screenshot 2025-12-25 at 2.28.39.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/b52c2d71-2295-4c4a-bf24-42a919a92120.png)
+#+END_EXPORT
+
+しかし時折、これが外から見た Emacs であるということに愕然とします。 Emacs の初期起動画面が改善し、新興のイケてるエディタだったということになればいいのに……。
+
+** 透過
+
+Zed ではないですが、 (比較的) 新興の [[https://www.warp.dev/][Warp]] が格好いいですね:
+
+#+BEGIN_EXPORT md
+![Screenshot 2025-12-25 at 2.50.20.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/71f5554d-3f98-429c-b23c-c675b9b91935.png)
+#+END_EXPORT
+
+僕の雑な設定だと伝わないかもしれませんが、まずテキストを透過せず、背景色のみを透過している点が良いです。さらに背景にブラーをかけることで、フォントはくっきり見えつつも、雅な画面ができあがって感嘆しました。別に透過したからと言って、後ろのウィンドウが見えなくてもいいわけですね。
+
+Emacs フレームの透過もできなくはないですが、フレーム全体の透過を設定するとテキストまで透過していまいます:
+
+#+BEGIN_EXPORT md
+![Screenshot 2025-12-25 at 2.50.26.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/0105d767-b7ea-4879-87db-c15b6402f6f4.png)
+#+END_EXPORT
+
+……Warp の上で Emacs を起動してみるとどうでしょう？:
+
+#+BEGIN_EXPORT md
+![Screenshot 2025-12-25 at 2.59.58.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/9558cb4f-040e-45e8-865b-5344239bf02e.png)
+#+END_EXPORT
+
+やったー！
+
+** まとめ
+
+カッコいい Warp ターミナルに寄生することで、若い血を吸って透過 & ブラーなフレームを持った Emacs が誕生しました。というアイデアだけの記事です。
+
+Emacs の透過や背景画像の設定で検索すると、もっとガチで面白い記事がヒットするかもしれません。何かしらの制約はあるのではないかと思いますが、実用的な範囲でクリアできれば十分ですね。僕も本当に Emacs on Warp ターミナルを始めるかもしれません。
+
+それでは、次の記事でお会いしましょう！
+
+* Emacs 精進 21: 愉快な仲間たち
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-21.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 21 日目の投稿です。
+
+** 背景
+
+愉快な仲間たちを紹介するぜ！
+
+#+BEGIN_EXPORT md
+![a.gif](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/83ef3f3d-48db-4792-b076-3a08afe92d12.gif)
+#+END_EXPORT
+
+** 設定
+
+出落ちですみません。光っているやつらを集めてみました。
+
+*** [[https://github.com/TeMPOraL/nyan-mode][nyan-mode]]
+
+モードラインに nyancat が登場します:
+
+#+BEGIN_SRC elisp
+(leaf nyan-mode
+  :config
+  (nyan-mode))
+#+END_SRC
+
+*** [[https://github.com/dp12/parrot][=parrot=]]
+
+モードラインに party parrot が登場します:
+
+#+BEGIN_SRC elisp
+(leaf parrot
+  :custom
+  ((nyan-animate-nyancat . t)
+   ;; 永遠に回し続ける
+   (parrot-num-rotations . nil))
+  :config
+  (parrot-mode))
+#+END_SRC
+
+*** [[https://github.com/Malabarba/beacon][=beacon=]]
+
+スクロール時にカーソルが光ります:
+
+#+BEGIN_SRC elisp
+(leaf becon
+  :config
+  (beacon-mode 1))
+#+END_SRC
+
+*** =rainbow-mode=
+
+カラーコードを着色してくれます:
+
+#+BEGIN_SRC elisp
+(leaf rainbow-mode
+  :config
+  (rainbow-mode 1))
+#+END_SRC
+
+自分で global minor mode を定義して使うと良いかもしれません。
+
+*** [[https://github.com/Fanael/rainbow-delimiters][=rainbow-delimiters=]]
+
+=()= などを着色してくれます:
+
+#+BEGIN_SRC elisp
+(leaf rainbow-delimiters
+  :config
+  (rainbow-delimiters-mode 1))
+#+END_SRC
+
+*** =zone=, [[https://github.com/kawabata/zone-rainbow][=zone-rainbow=]]
+
+テキストが七色に輝き始めるモードです:
+
+#+BEGIN_SRC elisp
+(leaf zone-rainbow
+  :after zone
+  :config
+  (setq zone-programs (vconcat [zone-rainbow] zone-programs)))
+#+END_SRC
+
+#+BEGIN_EXPORT md
+![zone.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/147ac293-875f-494b-bd75-38ae0ccd3764.png)
+#+END_EXPORT
+
+*** =gaming-mode=
+
+これは AI が作ってくれたのですが、どこかに忘れてしました……。
+
+** まとめ
+
+Emacs の光り物を集めてみました。エディタが何色に輝くかによって、あるいはエディタの遊び心によって、そのエディタでどこまで行けるのか、潜在能力を測ることができるのかもしません。
+
+それでは、次の記事でお会いしましょう！
+
+* Emacs 精進 22: 恩師が Emacsen だった人たち
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-22.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 22 日目の投稿です。
+
+** 背景
+
+指導教官が Emacsen の場合、学生は Emacs の使用を強いられることがあります。僕の周りでは、例外無く Emacs を嫌いになって、二度と使わなくなってしまいました。人と趣味や志を共有しようなんて、はかない幻想なのですね 🥺
+
+Emacsen 同士はお互いに理解不能な進化をしていますし、例え VSCode であっても中で Neovim が動いていたりしますから、お互い理解は困難です。結局、エディタの見た目ぐらいしか共有できないのかもしれません。
+
+** バッファグループの活用
+
+さて、 Emacs の表層を最も他のエディタに近づけてくれるパッケージは [[https://github.com/ema2159/centaur-tabs][=centaur-tabs=]] だと思います。このように表示します:
+
+#+BEGIN_EXPORT md
+![22-centaur-tabs-2.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/2349db7a-f732-4934-9098-2850c56c8786.png)
+#+END_EXPORT
+
+#+BEGIN_QUOTE
+[[https://github.com/rainstormstudio/nerd-icons.el][=nerd-icons.el=]] を入れるとターミナルでもアイコンを表示してくれて最高です。
+#+END_QUOTE
+
+*** プロジェクトごとのバッファグループを持つ
+
+これが通常のバッファバーと何が違うかと言えば、 =*scratch*= を始めとしたバッファが氾濫していない点です。あくまで現在開いているプロジェクトのバッファのみが表示しています。
+
+=centaur-tabs-switch-group= を開くと、以下の 4 つのグループに分かれていました:
+
+#+BEGIN_EXPORT md
+![22-centaur-tabs.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/d00ef48b-4a06-46a8-8f82-cfb50d07f87c.png)
+#+END_EXPORT
+
+=*scratch*= は =Misc= グループの中にいます。編集中の =qiita= グループとは別に、 =dotfiles= の記事も開いていますが、別グループのため上の通り非表示になっています。
+
+*** 『サイドバー』や『ボトムバー』を作る
+
+これを活かして『サイドバー』や『ボトムバー』を作ると、 VSCode の pane に少しだけ近づけます:
+
+#+BEGIN_EXPORT md
+![group.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/4f019d08-49fa-4666-86cb-55b458b0a606.png)
+#+END_EXPORT
+
+*** 設定
+
+強引ですが、以下のように =centaur-tabs-projectile-buffer-groups= を拡張する形で関数を定義し、 =centaur-tabs-buffer-groups-function= に登録すれば良いです:
+
+#+BEGIN_SRC elisp
+(defun toy/centaur-tabs-group ()
+    "Add `Sidebar' and `Bottom bar' groups / use `projectile' buffer gruups"
+    (cond
+     ((string-equal "@"
+                    (substring
+                     (buffer-name)
+                     0 1))
+      '("Sidebar"))
+     ((string-equal "⊥"
+                    (substring
+                     (buffer-name)
+                     0 1))
+      '("Bottom bar"))
+     ((or (string-equal "COMMIT-EDITMSG" (buffer-name))
+          (and (> (length (buffer-name)) 5)
+               (string-equal "magit"
+                             (substring
+                              (buffer-name)
+                              0 5))))
+      '("magit"))
+     ((string-equal " *" (substring (buffer-name) 0 2)) '("mini"))
+     (t
+   (centaur-tabs-projectile-buffer-groups))))
+#+END_SRC
+
+** まとめ
+
+カジュアルさの面から [[https://github.com/ema2159/centaur-tabs][=centaur-tabs=]] をご紹介しました。バッファグループごとにバッファバーが多重化されるという意味でも非常に助かっています。
+
+記載の設定はボロボロですみません……。
+
+それでは次の記事でお会いしましょう！
+
+* Emacs 精進 23: ご家庭の Emacs
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-23.md
+:END:
+
+この記事は [[https://qiita.com/advent-calendar/2025/emacs-25][Emacs 精進 Advent Calendar 2025]] 23 日目の投稿です。
+
+** 背景
+
+ご家庭の Emacs に遠隔でログインできたら嬉しい、ということで TRAMP を一瞬だけ触ってみます。
+
+#+BEGIN_QUOTE
+TRAMP: Transparent Remote Access, Multiple Protocols
+#+END_QUOTE
+
+** 実践 TRAMP
+
+macOS から NixOS のファイルを編集できるようにします。
+
+*** SSH 公開鍵の登録
+
+macOS 側で鍵を作成します:
+
+#+BEGIN_SRC sh
+$ ssh-keygen -t ed25519 -C "dummy_email@example.com"
+Generating public/private ed25519 key pair.
+Enter file in which to save the key (/Users/my-mac-user/.ssh/id_ed25519): dummy@example.com
+Enter passphrase for "dummy@example.com" (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved in dummy@example.com
+Your public key has been saved in dummy@example.com.pub
+The key fingerprint is:
+SHA256:bAC3Xan5xegEFikvuli5umDem86fg54DWu0f1m0H4Q0 dummy_email@example.com
+The key's randomart image is:
++--[ED25519 256]--+
+|    . . .o..     |
+|     o.o+..      |
+|      o+.+Eo     |
+|      .o+.o+o    |
+|   . o .S+o..    |
+| .. =  o .o.     |
+|oo.+.oo . o .    |
+|+.+o*o.. . .     |
+| .=@++o          |
++----[SHA256]-----+
+#+END_SRC
+
+=ssh-add= しておきます:
+
+#+BEGIN_SRC sh
+$ ssh-add ~/.ssh/dummy@example.com
+Enter passphrase for /Users/my-macos-user/.ssh/dummy@example.com:
+Identity added: /Users/my-macos-user/.ssh/dummy@example.com (dummy_email@example.com)
+#+END_SRC
+
+公開鍵 (=.pub=) の内容はこちら:
+
+#+BEGIN_SRC txt
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ+8wA5Cmhhy2ej3y4v8A8HzD1ZPLrBqf1KDfrhBwafR dummy_email@example.com
+#+END_SRC
+
+NixOS 側で鍵を登録します:
+
+#+BEGIN_SRC nix
+  users.users.my-nixos-user.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ+8wA5Cmhhy2ej3y4v8A8HzD1ZPLrBqf1KDfrhBwafR dummy_email@example.com"
+  ];
+#+END_SRC
+
+*** ローカルネットワーク上で接続
+
+NixOS 上で IP を確かめます:
+
+#+BEGIN_SRC sh
+$ ip a | rg 192
+    inet 192.168.151.229/23 brd 192.168.151.255 scope global dynamic noprefixroute wlo1
+#+END_SRC
+
+この IP に mac から =ssh= してみます:
+
+#+BEGIN_SRC sh
+$ ssh my-nixos-user@192.168.151.229
+The authenticity of host '192.168.151.229 (192.168.151.229)' can't be established.
+ED25519 key fingerprint is SHA256:Y9efEgG3alM/lQEkqDPqBkIQi6Z7XqlBLEa97eZeGDA.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '192.168.151.229' (ED25519) to the list of known hosts.
+Last login: Sat Nov  1 11:31:58 2025
+error: can not save history
+warning-path: Unable to locate data directory derived from $XDG_DATA_HOME: '/.local/share/fish'.
+warning-path: The error was 'Permission denied'.
+warning-path: Please set $XDG_DATA_HOME to a directory where you have write access.
+
+error: can not save universal variables or functions
+warning-path: Unable to locate config directory derived from $XDG_CONFIG_HOME: '/.config/fish'.
+warning-path: The error was 'Permission denied'.
+warning-path: Please set $XDG_CONFIG_HOME to a directory where you have write access.
+
+mkdir: cannot create directory ‘/generated_completions’: Permission denied
+mkdir: cannot create directory ‘/completions’: Permission denied
+mkdir: cannot create directory ‘/conf.d’: Permission denied
+mkdir: cannot create directory ‘/functions’: Permission denied
+warning: An error occurred while redirecting file '/config.fish'
+open: Permission denied
+mkdir: cannot create directory ‘/generated_completions’: Permission denied
+Welcome to fish, the friendly interactive shell
+Type help for instructions on how to use fish
+my-nixos-user@my-nixos-user ~>
+#+END_SRC
+
+設定の見直しが必要ですが、ひとまずそのまま動いてくれました。
+
+*** TRAMP でアクセス！
+
+macOS の Emacs において、 =find-file= で =/ssh:= と打つと、先程の SSH 先が *補完候補に表示します* 。そのままアクセスしてホームディレクトリのファイルを編集できました。
+
+** まとめ
+
+SSH の設定をすると、透過的に他の PC のファイルを透過的に編集できる、という上手い仕組みを体験することができました。原理的に可能なことは認識していましたが、思ったよりもお手軽に操作できました。
+
+これだけ気軽にアクセスできるなら、オーディオシステムに繋がった PC の操作など、すべて操作中のマシンからやってしまえば良さそうですね。
+
+それでは、次の記事でお会いしましょう！
+
+* Emacs 精進 24: もうタイピング力を鍛えるしかない
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-24.md
+:END:
+
+** 背景
+
+テキスト編集の効率化をある程度やってしまった場合、最後はタイピング力で差がつきます。寿司打と言わず、 Emacs のタイピングゲームで技能向上に努めてみましょう。
+
+** タイピング練習のパッケージ
+
+*** [[https://github.com/mrkkrp/typit][=mrkkrp/typit=]]
+
+#+BEGIN_SRC elisp
+(leaf typit)
+#+END_SRC
+
+#+BEGIN_EXPORT md
+![24-typit.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/1c5cc490-478d-4533-9d96-130429fd36f8.png)
+#+END_EXPORT
+
+単語入力して enter で正誤判定を更新し、次の単語へ移動します。緑が正しく入力した箇所で、赤が入力の失敗箇所、黒字が現在入力中の単語です。
+
+1 文字入力するごとに正誤判定が実施されるとなお良いかと思います。
+
+*** [[https://github.com/jpablobr/emacs-monkeytype][=emacs-monkeytype=]]
+
+#+BEGIN_SRC elisp
+(leaf monkeytype)
+#+END_SRC
+
+=monkeytype-buffer= により、なんと現在のバッファをタイピングゲームにできます:
+
+#+BEGIN_EXPORT md
+![monkeytype.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/594390/03aa7422-47b4-460f-b38f-3d7a5bbd5eb2.png)
+#+END_EXPORT
+
+Emacs パッケージには、しばしばテキストベースの環境で物事を実現するためのクレバーなアイデアを見ることができますが、今回も僕の想定を上回ってくれました。これは見に来た甲斐があったと思います。
+
+Vim や Emacs にはテキストべース UI という強い制約がありますが、 Rust しかり Haskell しかり、制約こそが強力な恩恵を生んでくれるのかもしれません。満足したので、早くもパッケージ探索は打ち止めとします。
+
+** まとめ
+
+人の PC を覗き見ると、マウス操作が速く正確で驚きます。日々キーボードを酷使することで、エイム力を失っているのは間違い有りません。せめて僕達にできることは、高級なマウスで操作能力を補うか、キーボード操作に特化してありえない速度でテキスト編集するかとなります。
+
+それでは、次の記事でお会いしましょう！
+
+* Emacs 精進 25: 最強の小指
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-2025-25.md
+:END:
+
+** 背景
+
+Emacsen は小指が発達しているか、無理なく押せる位置に装飾キーを配置している人が多いです。僕は Vim バインドを使っているため、そのような進化を遂げることは特に無かったのですが、
+
+* 好きなライブラリについて
+:PROPERTIES:
+:EXPORT_FILE_NAME: maspy-wavelet-matrix.md
+:END:
+
+** 背景
+
+[[https://github.com/maspypy][maspy]] さんのライブラリが好きです。特にここが良いと認識している点をご紹介します。
+
+#+BEGIN_QUOTE
+間違った内容があったらごめんなさい。
+#+END_QUOTE
+
+*** アピールポイント
+
+maspy さんのライブラリの良さは、概ね以下の 3 点で代表できると思います:
+
+#+BEGIN_EXPORT md
+1. データ構造を builder から分離している
+   配列でデータ構造を初期化 (`build`) した後は、配列長が変わることがありません。
+2. `template` を `trait` 的に使っている
+   maspy さんの `template` は、 `interface`, `trait`, 型クラスにそのまま置き換えて考えられます。
+3. 速さと高級さを両立している
+   [Library Checker](https://judge.yosupo.jp/) で上位の提出を維持しつつ、最も強力なライブラリになっていると思います。
+#+END_EXPORT
+
+とりわけ maspy さんの Wavelet Matrix は、 Library Checker の要求を超えた機能を持っていて良いと思います。これを簡単に紹介します。
+
+#+BEGIN_EXPORT md
+https://github.com/maspypy/library/blob/main/ds/wavelet_matrix/wavelet_matrix.hpp
+#+END_EXPORT
+
+** 1 次元の Wavelet Matrix
+
+*** Wavelet Matrix とは
+
+正確に理解した自信が無いので、詳しくはこちらをご覧ください……:
+
+#+BEGIN_EXPORT md
+https://miti-7.hatenablog.com/entry/2018/04/28/152259
+#+END_EXPORT
+
+お気持ちメモとしては、 Wavelet Matrix は値域の二分木だと思います。上位 bit から順に bit の on/off で左右に値を振り分けて行くため、 x, y の両軸で点を絞り込みできます。
+
+*** 関連: Library Checker における WM の出題
+
+1 次元の Wavelet Matrix で解ける問題:
+
+- [[https://judge.yosupo.jp/problem/range_kth_smallest][Range Kth Smallest]]
+- [[https://judge.yosupo.jp/problem/static_range_frequency][Static Range Frequency]]
+- [[https://judge.yosupo.jp/problem/static_range_count_distinct][Static Range Count Distinct]] (応用)
+
+2 次元の Wavelet Matrix で解ける問題:
+
+- [[https://judge.yosupo.jp/problem/rectangle_sum][Rectangle Sum]]
+- [[https://judge.yosupo.jp/problem/point_add_rectangle_sum][Point Add Rectangle Sum]]
+
+#+BEGIN_QUOTE
+その他、最近追加された問題で Wavelet Matrix でも解けるものもあるかもしれません。
+#+END_QUOTE
+
+*** 点の重み
+
+maspy さんの Wavelet Matrix では、 *1 次元の wavelet matrix の中にセグメント木があります* 。確かに、値と共に点を初期化する API があります:
+
+#+BEGIN_EXPORT md
+https://github.com/maspypy/library/blob/main/ds/wavelet_matrix/wavelet_matrix.hpp#L31-L32
+#+END_EXPORT
+
+そのため x の値毎に最大 1 つの点のみが存在する場合、 1 次元の Wavelet Matrix でモノイド積が取れてしまいます:
+
+#+BEGIN_EXPORT md
+https://github.com/maspypy/library/blob/19d70c3fbe53e85f98bf77b97a1a6412fa203c51/ds/wavelet_matrix/wavelet_matrix.hpp#L112-L113
+#+END_EXPORT
+
+これは 1 次元の Wavelet Matrix が高機能になる上に、 2 次元の Wavelet Matrix の実装でも再利用できる素晴らしいアイデアです。
+
+*** 逆元を要求しないモノイド積の取得
+
+逆元を活かしてモノイド積を計算できることが知られています:
+
+#+BEGIN_EXPORT md
+https://github.com/maspypy/library/blob/19d70c3fbe53e85f98bf77b97a1a6412fa203c51/ds/wavelet_matrix/wavelet_matrix.hpp#L114-L118
+#+END_EXPORT
+
+実は逆元が無い場合にも、強引に計算できてしまうようです:
+
+#+BEGIN_EXPORT md
+https://github.com/maspypy/library/blob/19d70c3fbe53e85f98bf77b97a1a6412fa203c51/ds/wavelet_matrix/wavelet_matrix.hpp#L119-L135
+#+END_EXPORT
+
+これも検索してもヒットしないテクニックだと思います。
+
+** まとめ
+
+maspy さんの Wavelet Matrix を簡単に、表層だけなぞってご紹介しました。 maspy さんのライブラリは高機能なものが多いのですが、特に wavelet matrix は巷の実装よりも高機能だったと思います。
+
+このように明文化されていないテクニックも多いので、コードを読むと色々発見があって面白いですね。
 
